@@ -1,0 +1,113 @@
+site_name: gmeta
+site_description: Metagenomic (mNGS) profiling and surveillance reporting — kraken2/bracken/sylph analysis to China CDC pathogen-network reports
+site_author: indexofire
+site_url: https://indexofire.github.io/gmeta/
+
+repo_name: indexofire/gmeta
+repo_url: https://github.com/indexofire/gmeta
+
+exclude_docs: |
+  README.md
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      # mkdocs-static-i18n configures Material's header language selector
+      # (extra.alternate) and the per-language search stemmer automatically.
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 简体中文
+          build: true
+          nav_translations:
+            Home: 首页
+            Installation: 安装
+            Quick Start: 快速开始
+            Databases: 数据库
+            Usage: 使用
+            CLI Reference: CLI 参考
+            识别网 Export: 识别网导出
+            Supported Profilers: 支持的分析软件
+            Coverage: 覆盖度计算
+            Architecture: 架构
+            Layers: 分层设计
+            Reference: 参考
+            File Formats: 文件格式
+            JSON Contract: JSON 契约
+            Development: 开发
+            Testing: 测试
+
+theme:
+  name: material
+  language: en
+  # Desktop: top tabs + section landing pages + right-hand TOC. The primary
+  # sidebar is hidden by stylesheets/extra.css; tablet/mobile keep the drawer.
+  features:
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.path
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Installation:
+    - installation/index.md
+    - Quick Start: installation/quick-start.md
+    - Databases: installation/databases.md
+  - Usage:
+    - usage/index.md
+    - CLI Reference: usage/cli.md
+    - 识别网 Export: usage/network.md
+    - Supported Profilers: usage/profilers.md
+    - Coverage: usage/coverage.md
+  - Architecture:
+    - architecture/index.md
+    - Layers: architecture/layers.md
+  - Reference:
+    - reference/index.md
+    - File Formats: reference/formats.md
+    - JSON Contract: reference/json-contract.md
+  - Development:
+    - development/index.md
+    - Testing: development/testing.md
+
+markdown_extensions:
+  - md_in_html
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+
+extra_css:
+  - stylesheets/extra.css

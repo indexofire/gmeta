@@ -1,0 +1,20 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# gmeta outputs (anchored: never match src/gmeta/data, the bundled tables)
+/gmeta-out/
+/site/
+/db-fetch/
+/data/

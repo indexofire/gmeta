@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>{{ report.sample.sample_id }} — mNGS 检测报告</title>
+<style>
+  :root { --ink: #1a2332; --muted: #5c6b7f; --line: #d8dee8; --accent: #0f5c8c; --warn: #b3541e; }
+  * { box-sizing: border-box; }
+  body { font-family: "Noto Sans CJK SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+         color: var(--ink); margin: 0; font-size: 14px; line-height: 1.55; }
+  .page { max-width: 880px; margin: 0 auto; padding: 40px 48px; }
+  h1 { font-size: 22px; text-align: center; margin: 0 0 2px; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 28px; }
+  h2 { font-size: 16px; color: var(--accent); border-bottom: 2px solid var(--accent);
+       padding-bottom: 4px; margin: 26px 0 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; font-weight: 600; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .priority-row td { background: #fdf3ec; }
+  .badge { display: inline-block; font-size: 12px; border-radius: 3px; padding: 1px 6px; }
+  .badge.high { background: #e5f2e8; color: #1c6b33; }
+  .badge.medium { background: #fbf3dd; color: #8a6d1a; }
+  .badge.low { background: #f0f1f3; color: #5c6b7f; }
+  .muted { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: 160px 1fr; row-gap: 6px; }
+  .kv b { font-weight: 600; color: var(--muted); }
+  footer { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 10px;
+           color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; }
+  @media print { .page { padding: 0; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>宏基因组测序（mNGS）病原检测报告</h1>
+<p class="subtitle">国家致病菌识别网 · 宏基因组监测</p>
+
+<h2>一、样本信息</h2>
+<div class="kv">
+  <b>样本编号</b><span>{{ report.sample.sample_id }}</span>
+  <b>样本类型</b><span>{{ report.sample.sample_type or "—" }}</span>
+  <b>测序平台</b><span>{{ report.sample.platform or "—" }}</span>
+  <b>测序日期</b><span>{{ report.sample.sequencing_date or "—" }}</span>
+  <b>检测单位</b><span>{{ report.sample.lab or "—" }}</span>
+  <b>检测人员</b><span>{{ report.sample.operator or "—" }}</span>
+</div>
+
+<h2>二、测序与质控</h2>
+<table>
+  <tr><th>指标</th><th class="num">数值</th><th>指标</th><th class="num">数值</th></tr>
+  <tr>
+    <td>原始读段数</td><td class="num">{{ fmt_int(report.qc.total_reads) }}</td>
+    <td>质控后读段数</td><td class="num">{{ fmt_int(report.qc.clean_reads) }}</td>
+  </tr>
+  <tr>
+    <td>原始数据量 (bp)</td><td class="num">{{ fmt_int(report.qc.total_bases) }}</td>
+    <td>质控后数据量 (bp)</td><td class="num">{{ fmt_int(report.qc.clean_bases) }}</td>
+  </tr>
+  <tr>
+    <td>Q30 比例</td><td class="num">{{ fmt_pct(report.qc.q30_rate) }}</td>
+    <td>宿主读段占比</td><td class="num">{{ fmt_pct(report.qc.host_rate) }}</td>
+  </tr>
+  <tr>
+    <td>分类读段数</td><td class="num">{{ fmt_int(report.qc.classified_reads) }}</td>
+    <td>分类比例</td><td class="num">{{ fmt_pct(report.qc.classified_fraction) }}</td>
+  </tr>
+</table>
+<p class="muted">分析流程：fastp 质控 → 去宿主 → {{ method_label(report.method) }}（数据库：{{ report.database or "—" }}）</p>
+
+{% if report.priority_hits %}
+<h2>三、重点病原提示</h2>
+<table>
+  <tr><th>检出病原</th><th>对应重点病原</th><th>读段数</th><th class="num">丰度</th><th>置信度</th></tr>
+  {% for row in report.priority_hits %}
+  <tr class="priority-row">
+    <td>{{ row.name }}</td>
+    <td>{{ row.priority_category }}</td>
+    <td class="num">{{ fmt_int(row.reads) }}</td>
+    <td class="num">{{ fmt_pct(row.fraction) }}</td>
+    <td><span class="badge {{ row.confidence }}">{{ row.confidence }}</span></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>{{ "四" if report.priority_hits else "三" }}、物种检出列表（前 {{ report.taxa | length }} 位）</h2>
+<table>
+  <tr><th>#</th><th>物种</th><th>TaxID</th><th>读段数</th><th class="num">丰度</th>{% if report.method == "sylph_ani" %}<th class="num">ANI (%)</th>{% endif %}<th>置信度</th><th>重点标注</th></tr>
+  {% for row in report.taxa %}
+  <tr class="{{ "priority-row" if row.priority }}">
+    <td>{{ loop.index }}</td>
+    <td>{{ row.name }}</td>
+    <td>{{ row.taxid or "—" }}</td>
+    <td class="num">{{ fmt_int(row.reads) }}</td>
+    <td class="num">{{ fmt_pct(row.fraction) }}</td>
+    {% if report.method == "sylph_ani" %}<td class="num">{{ "%.2f" | format(row.ani) if row.ani is not none else "—" }}</td>{% endif %}
+    <td><span class="badge {{ row.confidence }}">{{ row.confidence }}</span></td>
+    <td>{{ row.priority_category or "" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="muted">丰度为读段/物种占比；置信度：high ≥10%、medium ≥1%、low &lt;1%（sylph：ANI ≥95% high、≥90% medium）。结果需结合临床与流行病学信息判读，不作为唯一诊断依据。</p>
+
+<footer>
+  <span>gmeta {{ report.tool_version }} · {{ report.method }}</span>
+  <span>生成时间：{{ report.generated_at }}</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,93 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gmeta"
+version = "0.1.0"
+description = "Metagenomic (mNGS) profiling and surveillance reporting — kraken2/bracken/sylph analysis to China CDC pathogen-network reports"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12,<3.13"
+authors = [
+  { name = "indexofire", email = "indexofire@gmail.com" },
+]
+keywords = [
+  "metagenomics",
+  "mNGS",
+  "kraken2",
+  "bracken",
+  "sylph",
+  "surveillance",
+  "bioinformatics",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+  "click>=8.1",
+  "jinja2>=3.1",
+  "openpyxl>=3.1",
+  "pydantic>=2.7",
+  "pyyaml>=6.0",
+  "rich>=13",
+  "weasyprint>=62",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+  "pyright>=1.1",
+]
+
+[project.scripts]
+gmeta = "gmeta.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/indexofire/gmeta"
+Documentation = "https://indexofire.github.io/gmeta/"
+Repository = "https://github.com/indexofire/gmeta"
+Issues = "https://github.com/indexofire/gmeta/issues"
+Changelog = "https://github.com/indexofire/gmeta/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gmeta"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/README.md", "/LICENSE", "/CHANGELOG.md", "/tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# kreport/bracken fixtures embed the raw column layout verbatim
+"tests/conftest.py" = ["E501"]
+# kmcp 17-column literal TSV rows cannot be wrapped
+"tests/unit/test_executors.py" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["gmeta"]
+
+[tool.coverage.report]
+skip_covered = true

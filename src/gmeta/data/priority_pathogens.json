@@ -1,0 +1,188 @@
+[
+  {
+    "name": "Vibrio cholerae",
+    "zh_name": "霍乱弧菌",
+    "category": "甲类传染病",
+    "aliases": ["Vibrio cholerae O1", "Vibrio cholerae O139"]
+  },
+  {
+    "name": "Yersinia pestis",
+    "zh_name": "鼠疫耶尔森菌",
+    "category": "甲类传染病",
+    "aliases": ["Pasteurella pestis"]
+  },
+  {
+    "name": "Bacillus anthracis",
+    "zh_name": "炭疽芽孢杆菌",
+    "category": "乙类传染病",
+    "aliases": []
+  },
+  {
+    "name": "Brucella",
+    "zh_name": "布鲁氏菌",
+    "category": "乙类传染病",
+    "aliases": ["Brucella abortus", "Brucella melitensis", "Brucella suis"]
+  },
+  {
+    "name": "Mycobacterium tuberculosis",
+    "zh_name": "结核分枝杆菌",
+    "category": "乙类传染病",
+    "aliases": ["Mycobacterium tuberculosis complex"]
+  },
+  {
+    "name": "Shigella",
+    "zh_name": "志贺菌",
+    "category": "乙类传染病",
+    "aliases": ["Shigella flexneri", "Shigella sonnei", "Shigella dysenteriae", "Shigella boydii"]
+  },
+  {
+    "name": "Salmonella Typhi",
+    "zh_name": "伤寒沙门菌",
+    "category": "乙类传染病",
+    "aliases": ["Salmonella enterica serovar Typhi"]
+  },
+  {
+    "name": "Salmonella Paratyphi",
+    "zh_name": "副伤寒沙门菌",
+    "category": "乙类传染病",
+    "aliases": ["Salmonella enterica serovar Paratyphi"]
+  },
+  {
+    "name": "Corynebacterium diphtheriae",
+    "zh_name": "白喉棒状杆菌",
+    "category": "乙类传染病",
+    "aliases": []
+  },
+  {
+    "name": "Bordetella pertussis",
+    "zh_name": "百日咳鲍特菌",
+    "category": "乙类传染病",
+    "aliases": []
+  },
+  {
+    "name": "Neisseria meningitidis",
+    "zh_name": "脑膜炎奈瑟菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Streptococcus pneumoniae",
+    "zh_name": "肺炎链球菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Haemophilus influenzae",
+    "zh_name": "流感嗜血杆菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Streptococcus agalactiae",
+    "zh_name": "无乳链球菌（B群链球菌）",
+    "category": "监测重点",
+    "aliases": ["Group B Streptococcus"]
+  },
+  {
+    "name": "Streptococcus pyogenes",
+    "zh_name": "化脓链球菌（A群链球菌）",
+    "category": "监测重点",
+    "aliases": ["Group A Streptococcus"]
+  },
+  {
+    "name": "Legionella",
+    "zh_name": "军团菌",
+    "category": "监测重点",
+    "aliases": ["Legionella pneumophila"]
+  },
+  {
+    "name": "Listeria monocytogenes",
+    "zh_name": "单核细胞增生李斯特菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Campylobacter jejuni",
+    "zh_name": "空肠弯曲菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Vibrio parahaemolyticus",
+    "zh_name": "副溶血性弧菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Escherichia coli",
+    "zh_name": "大肠埃希菌",
+    "category": "监测重点",
+    "aliases": ["Shigella/Escherichia complex"]
+  },
+  {
+    "name": "Staphylococcus aureus",
+    "zh_name": "金黄色葡萄球菌",
+    "category": "监测重点",
+    "aliases": ["Methicillin-resistant Staphylococcus aureus"]
+  },
+  {
+    "name": "Klebsiella pneumoniae",
+    "zh_name": "肺炎克雷伯菌",
+    "category": "监测重点",
+    "aliases": []
+  },
+  {
+    "name": "Francisella tularensis",
+    "zh_name": "土拉弗朗西斯菌",
+    "category": "突发疫情防控",
+    "aliases": []
+  },
+  {
+    "name": "Burkholderia pseudomallei",
+    "zh_name": "类鼻疽伯克霍尔德菌",
+    "category": "突发疫情防控",
+    "aliases": []
+  },
+  {
+    "name": "Burkholderia mallei",
+    "zh_name": "鼻疽伯克霍尔德菌",
+    "category": "突发疫情防控",
+    "aliases": []
+  },
+  {
+    "name": "Chlamydia psittaci",
+    "zh_name": "鹦鹉热衣原体",
+    "category": "突发疫情防控",
+    "aliases": []
+  },
+  {
+    "name": "Rickettsia",
+    "zh_name": "立克次体",
+    "category": "突发疫情防控",
+    "aliases": ["Orientia tsutsugamushi"]
+  },
+  {
+    "name": "Influenza A virus",
+    "zh_name": "甲型流感病毒",
+    "category": "呼吸道病原",
+    "aliases": ["Influenza A"]
+  },
+  {
+    "name": "SARS-CoV-2",
+    "zh_name": "新型冠状病毒",
+    "category": "呼吸道病原",
+    "aliases": []
+  },
+  {
+    "name": "Measles virus",
+    "zh_name": "麻疹病毒",
+    "category": "呼吸道病原",
+    "aliases": []
+  },
+  {
+    "name": "Mpox virus",
+    "zh_name": "猴痘病毒",
+    "category": "突发疫情防控",
+    "aliases": ["Monkeypox virus"]
+  }
+]
