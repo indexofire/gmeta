@@ -548,6 +548,12 @@ def net_group() -> None:
     help="Extra coverage-details TSV (like the old coverage_details.tsv).",
 )
 @click.option(
+    "--missing-refs-out",
+    type=click.Path(),
+    default=None,
+    help="Write a TSV of species lacking reference genomes (sample, taxid, latin name, reads).",
+)
+@click.option(
     "--per-species", is_flag=True, help="Align each reference separately (exact, slower)."
 )
 @click.option(
@@ -576,6 +582,7 @@ def net_build(
     ref_dir: str | None,
     split_dir: str | None,
     details_tsv: str | None,
+    missing_refs_out: str | None,
     per_species: bool,
     min_depths: str,
     preset: str,
@@ -638,16 +645,36 @@ def net_build(
         all_rows.extend(rows)
 
         if not want_coverage:
+            for row in rows:
+                row.coverage_status = "未请求（无 --reads-dir）"
             continue
         reads = discover_reads(reads_dir, sample_id, reads_pattern)
         if reads is None:
+            from gmeta.analysis.coverage import discover_reads_auto
+
+            reads = discover_reads_auto(reads_dir, sample_id)
+            if reads is not None:
+                _info(
+                    f"[{sample_id}] pattern {reads_pattern!r} found nothing; "
+                    f"auto-detected reads: {', '.join(Path(r).name for r in reads)}"
+                )
+        if reads is None:
             sample_pattern = reads_pattern.format(sample=sample_id, pair="1")
+            similar = sorted(p.name for p in Path(reads_dir).glob(f"{sample_id}*") if p.is_file())[
+                :3
+            ]
+            hint = f"; files starting with {sample_id!r}: {', '.join(similar)}" if similar else ""
             _info(
                 f"[{sample_id}] no reads found — coverage left blank "
-                f"(looked for {Path(reads_dir) / sample_pattern}; "
+                f"(looked for {Path(reads_dir) / sample_pattern}{hint}; "
                 "adjust --reads-pattern or check the sample id matches the filename)"
             )
+            for row in rows:
+                row.coverage_status = "缺reads"
             continue
+        for row in rows:
+            if row.reference is None:
+                row.coverage_status = "缺参考基因组"
         entries = [
             (row.accession or str(row.taxid), Path(row.reference)) for row in rows if row.reference
         ]
@@ -663,15 +690,21 @@ def net_build(
             stats = runner(reads, entries, threads=threads, min_depths=thresholds, preset=preset)
         except RuntimeError as exc:
             _info(f"[{sample_id}] coverage failed: {exc}")
+            for row in rows:
+                if row.reference is not None:
+                    row.coverage_status = "覆盖度计算失败"
             continue
         for row in rows:
             key = row.accession or str(row.taxid)
             stat = stats.get(key)
             if stat is None:
+                if row.reference is not None:
+                    row.coverage_status = "覆盖度计算失败"
                 continue
             row.reference_length = stat.reference_length
             row.mean_depth = stat.mean_depth
             row.coverage_pct_1x = stat.pct_covered.get(1)
+            row.coverage_status = "已计算"
 
     if want_coverage:
         with_cov = sum(1 for row in all_rows if row.coverage_pct_1x is not None)
@@ -679,6 +712,13 @@ def net_build(
             f"coverage: {with_cov}/{len(all_rows)} row(s) filled "
             f"({len({r.sample_id for r in all_rows if r.coverage_pct_1x is not None})}"
             f"/{len(profiles)} sample(s))"
+        )
+    no_ref = [row for row in all_rows if row.reference is None]
+    if no_ref:
+        _info(
+            f"missing references: {len(no_ref)} row(s) — supply --manifest/--ref-dir "
+            "covering these species"
+            + (" (see --missing-refs-out for the list)" if missing_refs_out else "")
         )
 
     target = write_network_xlsx(all_rows, output)
@@ -691,6 +731,11 @@ def net_build(
 
         write_coverage_details(all_rows, details_tsv)
         _info(f"wrote {details_tsv}")
+    if missing_refs_out:
+        from gmeta.report.network import write_missing_references
+
+        write_missing_references(all_rows, missing_refs_out)
+        _info(f"wrote {missing_refs_out} ({len(no_ref)} row(s) without references)")
 
 
 @main.command("report", context_settings=HELP_SETTINGS)

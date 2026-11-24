@@ -3,7 +3,7 @@ authors = ["indexofire <indexofire@gmail.com>"]
 channels = ["conda-forge", "bioconda"]
 name = "gmeta"
 platforms = ["linux-64"]
-version = "0.1.1"
+version = "0.1.2"
 
 [tasks]
 check = "ruff check src/ tests/ && ruff format --check src/ tests/"

@@ -338,6 +338,57 @@ def discover_reads(
     return [str(found)] if found else None
 
 
+def _is_fastq(path: Path) -> bool:
+    name = path.name.lower()
+    for suffix in (".gz", ".bz2"):
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+    return name.endswith((".fq", ".fastq"))
+
+
+def _belongs(name: str, sample: str) -> bool:
+    """``SAMPLE_R1.fq`` / ``SAMPLE.fq`` match; ``SAMPLE2.fq`` must not."""
+    base, marker = name.lower(), sample.lower()
+    return base == marker or base.startswith((marker + "_", marker + "."))
+
+
+def discover_reads_auto(reads_dir: str | Path, sample: str) -> list[str] | None:
+    """Find a sample's FASTQ files by name prefix + mate markers.
+
+    Fallback for labs whose filenames don't follow one pattern
+    (``_1/_2``, ``.R1/.R2``, ``_R1_001``, single-end names). Both mates of
+    the first matched base → paired; one mate → single-end; no mate marker
+    → the first matching FASTQ.
+    """
+    from gmeta.samples import mate_key
+
+    base_dir = Path(reads_dir)
+    if not base_dir.is_dir():
+        return None
+    fastqs = [p for p in sorted(base_dir.iterdir()) if p.is_file() and _is_fastq(p)]
+    matches = [p for p in fastqs if _belongs(p.name, sample)]
+    if not matches:
+        return None
+
+    groups: dict[str, dict[int, str]] = {}
+    unpaired: list[str] = []
+    for path in matches:
+        key = mate_key(str(path))
+        if key is None:
+            unpaired.append(str(path))
+            continue
+        groups.setdefault(key[0].lower(), {})[key[1]] = str(path)
+
+    if groups:
+        mates = next(iter(groups.values()))
+        if 1 in mates and 2 in mates:
+            return [mates[1], mates[2]]
+        if 1 in mates:
+            return [mates[1]]
+        return [mates[2]]
+    return [unpaired[0]]
+
+
 def _try_read_variants(base: Path, name: str) -> Path | None:
     candidate = base / name
     if candidate.exists():
@@ -353,6 +404,7 @@ __all__ = [
     "coverage_for_species",
     "coverage_per_species",
     "discover_reads",
+    "discover_reads_auto",
     "fasta_sequence_lengths",
     "load_manifest",
     "resolve_reference",

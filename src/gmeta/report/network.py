@@ -54,6 +54,7 @@ DETAIL_COLUMNS = [
     "参考基因组长度",
     "平均测序深度",
     "覆盖度1x(%)",
+    "覆盖度状态",
 ]
 
 _HEADER_FILL = PatternFill("solid", fgColor="0F5C8C")
@@ -88,6 +89,7 @@ class NetworkRow:
     reference_length: int | None = None
     mean_depth: float | None = None
     coverage_pct_1x: float | None = None  # 种基因组覆盖度, percent 0..100
+    coverage_status: str | None = None  # 已计算 / 缺参考基因组 / 缺reads / …
 
     def network_cells(self, with_sample: bool = True) -> list[Any]:
         """The 8 template cells; blank 样本名称 on continuation rows."""
@@ -118,6 +120,7 @@ class NetworkRow:
             self.reference_length,
             round(self.mean_depth, 4) if self.mean_depth is not None else None,
             round(self.coverage_pct_1x, 4) if self.coverage_pct_1x is not None else None,
+            self.coverage_status or "",
         ]
 
 
@@ -504,6 +507,28 @@ def split_by_sample(rows: Sequence[NetworkRow], out_dir: str | Path) -> list[Pat
         wb.save(target)
         written.append(target)
     return written
+
+
+def write_missing_references(rows: Sequence[NetworkRow], path: str | Path) -> Path:
+    """TSV of species rows that had no resolvable reference genome.
+
+    Columns: sample_id, taxid, species_latin, species_cn, species_reads.
+    Sorted by sample then reads so the highest-impact gaps come first.
+    """
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    missing = sorted(
+        (row for row in rows if row.reference is None),
+        key=lambda row: (row.sample_id, -(row.species_reads or 0)),
+    )
+    with out.open("w", encoding="utf-8") as fh:
+        fh.write("sample_id\ttaxid\tspecies_latin\tspecies_cn\tspecies_reads\n")
+        for row in missing:
+            fh.write(
+                f"{row.sample_id}\t{row.taxid}\t{row.species_latin}\t{row.species_cn}\t"
+                f"{row.species_reads}\n"
+            )
+    return out
 
 
 def write_coverage_details(

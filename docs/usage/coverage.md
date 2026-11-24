@@ -31,6 +31,14 @@ estimates, ~N× slower.
 - **Reads are the raw FASTQs** (`--reads-dir`), not the QC/host-removed
   files — matching the legacy `calculate_coverage.py` contract, so
   coverage numbers remain comparable across batches.
+- **Read discovery is forgiving**: the `--reads-pattern` is tried first
+  (`{sample}_R{pair}.fastq.gz` by default, gz/plain variants); on a miss,
+  any FASTQ starting with the sample id is auto-detected and mates are
+  paired by `_R1/_R2`, `_1/_2`, `.1/.2` markers (single-end accepted).
+- **Every row carries a 覆盖度状态** on the 审核明细 sheet (`已计算` /
+  `缺参考基因组` / `缺reads` / `未请求（无 --reads-dir）` / `覆盖度计算失败`),
+  so an empty coverage cell always has a visible reason. `--missing-refs-out`
+  exports the species lacking references for follow-up downloads.
 - **Read length matters**: minimap2 `-x sr` needs ≥50 bp reads; ONT/PacBio
   data must pass `--preset map-ont` / `--preset map-pb`.
 - **Reference resolution order**: manifest by `species_taxid` →

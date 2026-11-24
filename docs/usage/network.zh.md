@@ -58,8 +58,9 @@ gmeta net build kraken/*.report \
 | `--profiler` | 强制指定格式（auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph） |
 | `--kaiju-genus` | kaiju2table 属级表，提供真实属计数 |
 | `--top` | 每样本物种行数（默认 10） |
-| `--reads-dir` + `--reads-pattern` | 覆盖度用的原始 reads |
+| `--reads-dir` + `--reads-pattern` | 覆盖度用的原始 reads；pattern 未命中时自动按样本名前缀探测（`_R1/_R2`、`_1/_2`、`.1/.2` 配对，单端亦可） |
 | `--manifest` / `--ref-dir` | 参考基因组 |
+| `--missing-refs-out` | 输出缺参考物种清单 TSV（样本、taxid、拉丁名、读数） |
 | `--split-dir` | 每样本一个工作簿 |
 | `--details` | 额外的覆盖度 TSV |
 | `--per-species` | 每个参考独立比对（精确、慢） |

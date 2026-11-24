@@ -26,6 +26,12 @@ reads（原始数据，未质控——与旧流程一致）
 
 - **用的是原始 FASTQ**（`--reads-dir`），不是质控/去宿主后的文件——与旧版
   `calculate_coverage.py` 的口径一致，跨批次可比。
+- **reads 发现很宽容**：先按 `--reads-pattern` 找（默认
+  `{sample}_R{pair}.fastq.gz`，gz/未压缩互试）；未命中时自动探测以样本号
+  开头的 FASTQ，按 `_R1/_R2`、`_1/_2`、`.1/.2` 标记配对（单端也可）。
+- **每行都有覆盖度状态**（审核明细 sheet：`已计算` / `缺参考基因组` /
+  `缺reads` / `未请求（无 --reads-dir）` / `覆盖度计算失败`），空单元格
+  永远有可见原因；`--missing-refs-out` 可导出缺参考物种清单便于补下载。
 - **读长有影响**：minimap2 `-x sr` 需要 ≥50 bp 读段；ONT/PacBio 数据必须传
   `--preset map-ont` / `--preset map-pb`。
 - **参考解析顺序**：manifest 按 `species_taxid` → `--ref-dir` 里
