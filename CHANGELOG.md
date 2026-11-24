@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-24
+
 ### Fixed
 
 - 识别网导出：宿主类群（默认 `Homo sapiens`，TaxID 9606）在 top-N 排序前过滤，不再出现在混合样本/审核明细中；kraken2 树形路径与表格式适配路径一致生效（`HOST_TAXIDS` 可扩展动物宿主）。

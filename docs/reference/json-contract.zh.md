@@ -7,7 +7,7 @@
 {
   "schema_version": 1,
   "tool": "gmeta",
-  "tool_version": "0.1.0",
+  "tool_version": "0.1.1",
   "generated_at": "2026-11-07T08:00:00+00:00",
   "sample": {
     "sample_id": "SAMPLE-001",
