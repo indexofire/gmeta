@@ -258,8 +258,10 @@ mkdir -p "$DEST"
 MANIFEST="$DEST/manifest.csv"
 [ -f "$MANIFEST" ] || echo "accession,species_taxid,organism_taxid,scientific_name,file_path" > "$MANIFEST"
 
-for taxid in \\
+for taxid in $(cat <<'EOF'
 __TAXIDS__
+EOF
+)
 do
     # prefer the reference/representative assembly; fall back to the first hit
     summary=$(datasets summary genome taxid "$taxid" --reference --as-json-lines 2>/dev/null | head -n 1) || summary=""

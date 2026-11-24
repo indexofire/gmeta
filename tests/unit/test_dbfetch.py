@@ -59,13 +59,28 @@ def test_refs_script_content(tmp_path: Path) -> None:
     assert written[0].name == "fetch-refs.sh"
     assert "datasets summary genome taxid" in body
     assert "datasets download genome accession" in body
-    assert "for taxid in \\\n562\n662" in body
+    assert "562\n662" in body
     assert "manifest.csv" in body
     assert "--ref-dir" in body
     # CLI (not the deprecated Python pylib) is the documented requirement
     assert "ncbi-datasets-cli" in body
     assert "pylib is deprecated" in body
     assert "--reference" in body  # prefer reference/representative assembly
+
+
+def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
+    """Regression: the taxid list must be syntactically valid bash."""
+    import subprocess
+
+    write_fetch_scripts(
+        ["kraken2", "refs"],
+        tmp_path,
+        "/data/db",
+        refs_taxids=["28132", "1304", "662"],
+    )
+    for script in tmp_path.glob("*.sh"):
+        result = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+        assert result.returncode == 0, f"{script.name}: {result.stderr}"
 
 
 def test_cli_db_fetch_refs(tmp_path: Path) -> None:
