@@ -57,9 +57,18 @@ bash scripts/fetch-refs.sh        # NCBI datasets: one genome per taxid
 ```
 
 The script installs `refs/<taxid>_<accession>.fna` (matched by `--ref-dir`
-without a manifest) and appends to `refs/manifest.csv`. Requires
-`pip install ncbi-datasets-pylib` (or conda `ncbi-datasets-cli`). You can
-also pass explicit taxids: `--taxids 562,662`.
+without a manifest) and appends to `refs/manifest.csv`. Requires the
+**NCBI Datasets CLI** (`datasets` binary; the Python `pylib` is deprecated
+upstream):
+
+```bash
+conda install -c conda-forge ncbi-datasets-cli
+# or the standalone binary:
+curl -o datasets https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets
+chmod +x datasets && sudo mv datasets /usr/local/bin/
+```
+
+You can also pass explicit taxids: `--taxids 562,662`.
 
 URLs move with releases; every URL sits in a variable at the top of its
 script with upstream links in comments.

@@ -62,6 +62,10 @@ def test_refs_script_content(tmp_path: Path) -> None:
     assert "for taxid in \\\n562\n662" in body
     assert "manifest.csv" in body
     assert "--ref-dir" in body
+    # CLI (not the deprecated Python pylib) is the documented requirement
+    assert "ncbi-datasets-cli" in body
+    assert "pylib is deprecated" in body
+    assert "--reference" in body  # prefer reference/representative assembly
 
 
 def test_cli_db_fetch_refs(tmp_path: Path) -> None:

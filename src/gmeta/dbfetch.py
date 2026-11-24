@@ -240,13 +240,17 @@ echo "     use with: gmeta run ... --host-index $DEST/grch38"
 
 def _refs_script(db_root: str, taxids: list[str]) -> str:
     body = """\
-# --- coverage reference genomes (NCBI datasets) -------------------------
+# --- coverage reference genomes (NCBI datasets CLI) ---------------------
 # One genome per taxid, renamed to <taxid>_<accession>.fna so `--ref-dir`
 # matches without a manifest; manifest.csv is written alongside as well.
-# Requires the NCBI datasets CLI:  pip install ncbi-datasets-pylib
-#   (or conda: install -c bioconda ncbi-datasets-cli)
+# Requires the NCBI Datasets CLI v2 (`datasets` binary, no Python library):
+#   conda install -c conda-forge ncbi-datasets-cli
+#   or download: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/
+# (ncbi-datasets-pylib is deprecated upstream — the CLI is the supported path.)
 command -v datasets >/dev/null 2>&1 || {
-    echo "ERROR: NCBI datasets CLI not on PATH (pip install ncbi-datasets-pylib)" >&2
+    echo "ERROR: NCBI Datasets CLI not on PATH." >&2
+    echo "  conda install -c conda-forge ncbi-datasets-cli" >&2
+    echo "  or: curl -o datasets https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets && chmod +x datasets" >&2
     exit 1
 }
 DEST="$DB_ROOT/refs"
@@ -257,10 +261,11 @@ MANIFEST="$DEST/manifest.csv"
 for taxid in \\
 __TAXIDS__
 do
-    acc=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null \\
-        | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["accessions"]["assembly"])')
-    name=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null \\
-        | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["organism"]["organism_name"].replace(",", " "))')
+    # prefer the reference/representative assembly; fall back to the first hit
+    summary=$(datasets summary genome taxid "$taxid" --reference --as-json-lines 2>/dev/null | head -n 1) || summary=""
+    [ -n "$summary" ] || summary=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null | head -n 1) || summary=""
+    acc=$(printf '%s' "$summary" | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["accessions"]["assembly"])' 2>/dev/null) || acc=""
+    name=$(printf '%s' "$summary" | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["organism"]["organism_name"].replace(",", " "))' 2>/dev/null) || name=""
     [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid" >&2; continue; }
     if [ -f "$DEST/${taxid}_${acc}.fna" ]; then
         echo "skip taxid $taxid ($acc already present)"
