@@ -33,6 +33,36 @@ gmeta net build kraken/*.report \
   -o 识别网上报.xlsx --split-dir result/ --details coverage_details.tsv
 ```
 
+### From `gmeta run` to the workbook
+
+`gmeta run` keeps its profiler artifacts under `<outdir>/<sample>/pipeline/`
+(`kreport.txt`, `bracken.txt`, `fastp.json`, …). `net build` recognises that
+layout: the sample id comes from the directory, so the run output feeds the
+workbook directly and reads are found by the sample id.
+
+```bash
+# 1) profile one sample (kraken2 + bracken)
+gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
+  -D /data/db/kraken2 -O gmeta-out/1 -t 8
+
+# 2) surveillance workbook from the run's kreport (sample id inferred as "1")
+gmeta net build gmeta-out/1/pipeline/kreport.txt \
+  --reads-dir . \
+  --manifest ref_genome_manifest.csv --ref-dir ref_genomes \
+  -o 1.xlsx --details coverage_details.tsv --missing-refs-out missing_refs.tsv -t 8
+```
+
+Notes:
+
+- On releases without the pipeline-layout inference, copy the artifact to a
+  sample-named file first: `cp gmeta-out/1/pipeline/kreport.txt gmeta-out/1/1.kreport`
+  and pass that path instead.
+- `-D` needs a complete kraken2 DB: `hash.k2d/taxo.k2d/opts.k2d` **plus**
+  `databaseXXXmers.kmer_distrib` (bracken). `gmeta db fetch kraken2` writes the
+  download script when the DB is missing.
+- `--host-index` is optional; without it host reads stay in the sample but are
+  filtered from the surveillance rows anyway.
+
 ## Semantics per profiler
 
 | Profiler | 属序列数 source | 种相对丰度 source |

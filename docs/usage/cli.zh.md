@@ -66,6 +66,11 @@ gmeta report -s SAMPLE-001 --metaphlan profile.txt -o SAMPLE-1.report.html
 
 识别网上报工作簿——见[识别网导出](network.zh.md)。
 
+输入可以是任意支持的分析结果，包括 `gmeta run` 在
+`<outdir>/<sample>/pipeline/kreport.txt` 下的产物（样本号取自目录）。
+覆盖度相关参数：`--reads-dir`/`--reads-pattern`、`--manifest`、
+`--ref-dir`、`--missing-refs-out`；审核明细 sheet 逐行记录覆盖度状态。
+
 ## db
 
 ```bash

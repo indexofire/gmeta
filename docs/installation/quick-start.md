@@ -49,7 +49,10 @@ pixi run gmeta net build kraken/*.report \
 
 - 混合样本 sheet: the template-exact eight columns (属/种中文名、序列数、
   相对丰度、种基因组覆盖度), 样本名称 only on each sample's first row.
-- 审核明细 sheet: latin names, TaxID, accession, reference path, mean depth.
+- 审核明细 sheet: latin names, TaxID, accession, reference path, mean depth,
+  plus a 覆盖度状态 column (`已计算` / `缺参考基因组` / `缺reads` / …).
 - `--split-dir`: one single-sheet workbook per sample (sample id on every row).
+- Coming from step 3? Point it at the run's artifact — the sample id comes
+  from the directory: `gmeta net build gmeta-out/SAMPLE-001/pipeline/kreport.txt …`
 
 [More on the 识别网 export →](../usage/network.md)

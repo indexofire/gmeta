@@ -32,6 +32,33 @@ gmeta net build kraken/*.report \
   -o 识别网上报.xlsx --split-dir result/ --details coverage_details.tsv
 ```
 
+### 从 `gmeta run` 到上报工作簿
+
+`gmeta run` 的分析产物保存在 `<outdir>/<sample>/pipeline/`（`kreport.txt`、
+`bracken.txt`、`fastp.json` 等）。`net build` 识别这个目录结构：样本号取自
+样本目录，run 的产物可直接生成工作簿，reads 也按样本号自动匹配。
+
+```bash
+# 1) 单样本分析（kraken2 + bracken）
+gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
+  -D /data/db/kraken2 -O gmeta-out/1 -t 8
+
+# 2) 用 run 的 kreport 生成上报工作簿（样本号自动推导为 "1"）
+gmeta net build gmeta-out/1/pipeline/kreport.txt \
+  --reads-dir . \
+  --manifest ref_genome_manifest.csv --ref-dir ref_genomes \
+  -o 1.xlsx --details coverage_details.tsv --missing-refs-out missing_refs.tsv -t 8
+```
+
+注意：
+
+- 旧版本（不含 pipeline 目录推断）请先复制成样本名文件：
+  `cp gmeta-out/1/pipeline/kreport.txt gmeta-out/1/1.kreport`，再传该路径。
+- `-D` 需要完整 kraken2 库：`hash.k2d/taxo.k2d/opts.k2d` **加**
+  `databaseXXXmers.kmer_distrib`（bracken 用）。缺库时用
+  `gmeta db fetch kraken2` 生成下载脚本。
+- `--host-index` 可选；省略时宿主 reads 留在样本里，但不会进入上报表行。
+
 ## 各软件的语义
 
 | 软件 | 属序列数来源 | 种相对丰度来源 |

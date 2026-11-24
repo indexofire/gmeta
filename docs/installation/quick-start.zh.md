@@ -49,7 +49,10 @@ pixi run gmeta net build kraken/*.report \
 
 - 混合样本 sheet：与模板一致的 8 列（属/种中文名、序列数、相对丰度、种基因组覆盖度），
   样本名称仅在每个样本首行填写。
-- 审核明细 sheet：拉丁名、TaxID、accession、参考基因组路径、平均深度。
+- 审核明细 sheet：拉丁名、TaxID、accession、参考基因组路径、平均深度，
+  外加覆盖度状态列（`已计算` / `缺参考基因组` / `缺reads` / …）。
 - `--split-dir`：每样本一个单 sheet 工作簿（每行填样本名）。
+- 从第 3 步延续？直接传 run 的产物即可，样本号取自目录：
+  `gmeta net build gmeta-out/SAMPLE-001/pipeline/kreport.txt …`
 
 [识别网导出详解 →](../usage/network.zh.md)

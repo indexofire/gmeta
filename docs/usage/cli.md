@@ -68,6 +68,12 @@ gmeta report -s SAMPLE-001 --metaphlan profile.txt -o SAMPLE-1.report.html
 
 识别网 submission workbook — see [识别网 export](network.md).
 
+Inputs can be any supported profiler file, including `gmeta run` artifacts
+under `<outdir>/<sample>/pipeline/kreport.txt` (the sample id comes from the
+directory). Coverage options: `--reads-dir`/`--reads-pattern`, `--manifest`,
+`--ref-dir`, `--missing-refs-out`; the 审核明细 sheet records a 覆盖度状态
+per row.
+
 ## db
 
 ```bash
