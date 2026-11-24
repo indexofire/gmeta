@@ -321,19 +321,19 @@ def discover_reads(
 ) -> list[str] | None:
     """FASTQ paths for a sample; None when nothing is found.
 
-    ``{pair}`` in the pattern means paired-end (expanded to 1/2); compressed
-    and uncompressed variants are tried interchangeably.
+    ``{pair}`` in the pattern means paired-end-capable (expanded to 1/2):
+    both mates present → two files, only one present → single-end fallback
+    (common for legacy single-end runs), neither → None. Compressed and
+    uncompressed variants are tried interchangeably.
     """
     base = Path(reads_dir)
     if "{pair}" in pattern:
         reads: list[str] = []
         for pair in ("1", "2"):
-            candidate = pattern.format(sample=sample, pair=pair)
-            found = _try_read_variants(base, candidate)
-            if found is None:
-                return None
-            reads.append(str(found))
-        return reads
+            found = _try_read_variants(base, pattern.format(sample=sample, pair=pair))
+            if found is not None:
+                reads.append(str(found))
+        return reads or None
     found = _try_read_variants(base, pattern.format(sample=sample))
     return [str(found)] if found else None
 

@@ -43,6 +43,11 @@ gmeta net build kraken/*.report \
 | metaphlan | `g__` rows | relative_abundance |
 | kmcp | species aggregation (per-reference format) | percentage (aggregated) |
 
+**Host taxa are filtered out** before ranking: `Homo sapiens` (TaxID 9606)
+never appears in the submission table even when host reads dominate the
+sample. Extend `HOST_TAXIDS` in `src/gmeta/report/network.py` for animal
+hosts (e.g. 10090 mouse).
+
 When a profiler has no genus rows (kmcp, kaiju without the genus table),
 genus counts are aggregated from that genus' species rows — the honest
 estimate the format allows.

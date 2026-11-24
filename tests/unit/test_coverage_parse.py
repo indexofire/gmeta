@@ -102,8 +102,14 @@ def test_discover_reads_paired_and_gz(tmp_path: Path) -> None:
     assert found is not None and len(found) == 2
     assert found[0].endswith("S1_R1.fastq.gz")
 
-    # one mate missing → None
-    assert discover_reads(reads, "S2", "{sample}_R{pair}.fastq.gz") is None
+    # only one mate present → single-end fallback (legacy single-end runs)
+    _write(reads, "S2_R1.fastq.gz", "")
+    found = discover_reads(reads, "S2", "{sample}_R{pair}.fastq.gz")
+    assert found is not None and len(found) == 1
+    assert found[0].endswith("S2_R1.fastq.gz")
+
+    # nothing present → None
+    assert discover_reads(reads, "S3", "{sample}_R{pair}.fastq.gz") is None
 
 
 def test_discover_reads_single_end_variant(tmp_path: Path) -> None:

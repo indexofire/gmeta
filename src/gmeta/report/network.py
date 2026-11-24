@@ -59,6 +59,15 @@ DETAIL_COLUMNS = [
 _HEADER_FILL = PatternFill("solid", fgColor="0F5C8C")
 _HEADER_FONT = Font(color="FFFFFF", bold=True)
 
+# Host (and other non-microbial) taxa must never reach the surveillance table:
+# the template expects the microbial community only, and host reads otherwise
+# dominate the top-N. Extend this set for animal hosts (e.g. 10090 mouse).
+HOST_TAXIDS: frozenset[int] = frozenset({9606})  # Homo sapiens
+
+
+def is_host_taxon(taxid: int | None) -> bool:
+    return taxid is not None and taxid in HOST_TAXIDS
+
 
 @dataclass
 class NetworkRow:
@@ -201,8 +210,9 @@ def pair_species_with_genus(
 
 
 def top_species(summary: KreportSummary, top: int) -> list[tuple[KreportRow, KreportRow | None]]:
-    """Top-N (species, genus) pairs by species read count."""
-    pairs = sorted(pair_species_with_genus(summary), key=lambda p: p[0].reads_total, reverse=True)
+    """Top-N (species, genus) pairs by species read count, host taxa excluded."""
+    pairs = [pair for pair in pair_species_with_genus(summary) if not is_host_taxon(pair[0].taxid)]
+    pairs.sort(key=lambda p: p[0].reads_total, reverse=True)
     return pairs[:top]
 
 
@@ -394,7 +404,8 @@ def build_rows_from_profile(
         stats[1] += taxon.fraction
 
     rows: list[NetworkRow] = []
-    for taxon in profile.species_sorted()[:top]:
+    candidates = [taxon for taxon in profile.species_sorted() if not is_host_taxon(taxon.taxid)]
+    for taxon in candidates[:top]:
         genus_latin = genus_latin_of[taxon.name.lower()]
         genus_row = genus_table.get(genus_latin.lower())
         if genus_row is not None:

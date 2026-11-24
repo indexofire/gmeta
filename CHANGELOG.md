@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 识别网导出：宿主类群（默认 `Homo sapiens`，TaxID 9606）在 top-N 排序前过滤，不再出现在混合样本/审核明细中；kraken2 树形路径与表格式适配路径一致生效（`HOST_TAXIDS` 可扩展动物宿主）。
+- `discover_reads`：`{pair}` 模式下 R2 缺失时回退单端（之前直接判 "no reads found"，导致单端数据或非标准命名的 reads 覆盖度全空）；`net build` 未找到 reads / 无可解析参考时打印实际尝试的路径与修复提示，结束时汇总覆盖度填充率。
+
 ## [0.1.0] - 2026-11-07
 
 首个发行版：宏基因组（mNGS）分析与监测报告工具，自 gside 的 meta 层整体迁移并扩展。

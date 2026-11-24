@@ -32,12 +32,19 @@ def test_pair_species_with_genus(kreport_file: Path) -> None:
 
 
 def test_top_species_orders_by_reads(kreport_file: Path) -> None:
+    # host taxa (Homo sapiens, 9606) are excluded before ranking
     pairs = top_species(parse_kreport(kreport_file), 3)
     assert [sp.name for sp, _ in pairs] == [
-        "Homo sapiens",
         "Vibrio cholerae",
         "Escherichia coli",
+        "Vibrio parahaemolyticus",
     ]
+
+
+def test_top_species_excludes_host_taxa(kreport_file: Path) -> None:
+    pairs = top_species(parse_kreport(kreport_file), 10)
+    assert all(sp.taxid != 9606 for sp, _ in pairs)
+    assert all(sp.name != "Homo sapiens" for sp, _ in pairs)
 
 
 def test_chinese_species_name_lookup() -> None:
@@ -72,14 +79,12 @@ def test_build_rows_genus_fallback_and_names(kreport_file: Path) -> None:
     assert cholera.genus_reads == 29500
     assert cholera.species_reads == 25000
 
-    homo = by_latin["Homo sapiens"]
-    assert homo.genus_latin == "Homo"  # first-word fallback
-    assert homo.genus_reads == homo.species_reads
+    assert "Homo sapiens" not in by_latin  # host taxon excluded
 
 
 def test_build_rows_top_limit(kreport_file: Path) -> None:
     rows = build_rows(parse_kreport(kreport_file), "TEST-1", top=2)
-    assert [row.species_latin for row in rows] == ["Homo sapiens", "Vibrio cholerae"]
+    assert [row.species_latin for row in rows] == ["Vibrio cholerae", "Escherichia coli"]
 
 
 def test_write_network_xlsx(kreport_file: Path, tmp_path: Path) -> None:
@@ -106,12 +111,13 @@ def test_write_network_xlsx(kreport_file: Path, tmp_path: Path) -> None:
     # first data row carries the sample id, continuation rows do not
     assert ws.cell(row=2, column=1).value == "S1"
     assert ws.cell(row=3, column=1).value is None
-    assert ws.cell(row=6, column=1).value == "S2"  # new sample group
-    assert ws.cell(row=2, column=4).value == "40.00%"
+    assert ws.cell(row=5, column=1).value == "S2"  # new sample group (S1 has 3 rows)
+    assert ws.cell(row=2, column=4).value == "30.00%"  # genus Vibrio clade 30%
     assert abs(ws.cell(row=2, column=7).value - 94.5350845526999) < 1e-9
 
     detail = wb[DETAIL_SHEET]
-    assert detail.cell(row=2, column=4).value == "Homo sapiens"  # 种拉丁名
+    assert detail.cell(row=2, column=4).value == "Vibrio cholerae"  # 种拉丁名
+    assert all(cell.value != "Homo sapiens" for row in detail.iter_rows(min_row=2) for cell in row)
 
 
 def test_split_by_sample(kreport_file: Path, tmp_path: Path) -> None:

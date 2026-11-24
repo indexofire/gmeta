@@ -20,8 +20,9 @@ def test_net_build_from_kreport(kreport_file: Path, tmp_path: Path) -> None:
     ws = wb["混合样本"]
     assert ws.cell(row=1, column=1).value == "样本名称"
     assert ws.cell(row=2, column=1).value == kreport_file.stem
-    # 4 species in the fixture
-    assert ws.max_row == 5
+    # 4 species in the fixture, minus the host (Homo sapiens) → 3 rows
+    assert ws.max_row == 4
+    assert all(cell.value != "Homo sapiens" for row in ws.iter_rows(min_row=2) for cell in row)
 
 
 def test_net_build_split_dir(kreport_file: Path, tmp_path: Path) -> None:

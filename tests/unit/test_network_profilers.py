@@ -77,6 +77,21 @@ def pytest_approx(value: float):
     return pytest.approx(value)
 
 
+def test_build_rows_from_profile_excludes_host(tmp_path: Path) -> None:
+    from gmeta.analysis.profilers import AbundanceProfile, TaxonAbundance
+
+    profile = AbundanceProfile(
+        method="centrifuge",
+        species=[
+            TaxonAbundance(name="Homo sapiens", taxid=9606, reads=90000, fraction=0.90),
+            TaxonAbundance(name="Vibrio cholerae", taxid=662, reads=9000, fraction=0.09),
+        ],
+        genus=[],
+    )
+    rows = build_rows_from_profile(profile, "S1", top=10)
+    assert [row.species_latin for row in rows] == ["Vibrio cholerae"]
+
+
 def test_build_rows_from_profile_kmcp_genus_aggregation(tmp_path: Path) -> None:
     profile = _profile(tmp_path, "kmcp.tsv", KMCP_PROFILE)
     rows = build_rows_from_profile(profile, "S1", top=10)

@@ -641,13 +641,21 @@ def net_build(
             continue
         reads = discover_reads(reads_dir, sample_id, reads_pattern)
         if reads is None:
-            _info(f"[{sample_id}] no reads found — coverage left blank")
+            sample_pattern = reads_pattern.format(sample=sample_id, pair="1")
+            _info(
+                f"[{sample_id}] no reads found — coverage left blank "
+                f"(looked for {Path(reads_dir) / sample_pattern}; "
+                "adjust --reads-pattern or check the sample id matches the filename)"
+            )
             continue
         entries = [
             (row.accession or str(row.taxid), Path(row.reference)) for row in rows if row.reference
         ]
         if not entries:
-            _info(f"[{sample_id}] no resolvable references — coverage left blank")
+            _info(
+                f"[{sample_id}] no resolvable references — coverage left blank "
+                "(provide --manifest or --ref-dir with per-species FASTAs)"
+            )
             continue
         _info(f"[{sample_id}] coverage: {len(entries)} reference(s), {len(reads)} read file(s)")
         runner = coverage_per_species if per_species else coverage_for_species
@@ -664,6 +672,14 @@ def net_build(
             row.reference_length = stat.reference_length
             row.mean_depth = stat.mean_depth
             row.coverage_pct_1x = stat.pct_covered.get(1)
+
+    if want_coverage:
+        with_cov = sum(1 for row in all_rows if row.coverage_pct_1x is not None)
+        _info(
+            f"coverage: {with_cov}/{len(all_rows)} row(s) filled "
+            f"({len({r.sample_id for r in all_rows if r.coverage_pct_1x is not None})}"
+            f"/{len(profiles)} sample(s))"
+        )
 
     target = write_network_xlsx(all_rows, output)
     _info(f"wrote {target} ({len(all_rows)} rows, {len(profiles)} sample(s))")

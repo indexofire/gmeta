@@ -42,6 +42,10 @@ gmeta net build kraken/*.report \
 | metaphlan | `g__` 行 | relative_abundance |
 | kmcp | 种读数聚合（按参考行格式） | percentage（聚合后） |
 
+**宿主类群在排序前被过滤**：即使宿主 reads 占绝对多数，`Homo sapiens`
+（TaxID 9606）也不会出现在上报表中。动物宿主（如 10090 小鼠）可扩展
+`src/gmeta/report/network.py` 里的 `HOST_TAXIDS`。
+
 软件没有属级行时（kmcp、未附属表的 kaiju），属计数由该属的种读数聚合——
 该格式下最诚实的估计。
 
