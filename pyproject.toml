@@ -77,6 +77,8 @@ ignore = []
 "tests/conftest.py" = ["E501"]
 # kmcp 17-column literal TSV rows cannot be wrapped
 "tests/unit/test_executors.py" = ["E501"]
+# generated bash script bodies cannot wrap long command lines
+"src/gmeta/dbfetch.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -127,7 +127,18 @@ def db_group() -> None:
     "targets",
     nargs=-1,
     type=click.Choice(
-        ["all", "kraken2", "centrifuge", "kaiju", "metaphlan", "kmcp", "sylph", "taxdump", "host"]
+        [
+            "all",
+            "kraken2",
+            "centrifuge",
+            "kaiju",
+            "metaphlan",
+            "kmcp",
+            "sylph",
+            "taxdump",
+            "host",
+            "refs",
+        ]
     ),
 )
 @click.option(
@@ -144,18 +155,67 @@ def db_group() -> None:
     default=None,
     help="Database root the scripts install into (default: $GMETA_DB_DIR or gmeta data/db).",
 )
-def db_fetch(targets: tuple[str, ...], out_dir: str, db_root: str | None) -> None:
+@click.option(
+    "--taxids",
+    default=None,
+    help="Comma-separated species taxids for the refs target (coverage references).",
+)
+@click.option(
+    "--missing-refs",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="TSV from `gmeta net build --missing-refs-out`; its taxid column feeds refs.",
+)
+def db_fetch(
+    targets: tuple[str, ...],
+    out_dir: str,
+    db_root: str | None,
+    taxids: str | None,
+    missing_refs: str | None,
+) -> None:
     """Generate database download scripts (NOT executed — review URLs first).
 
     Databases are tens of GB; each script is resumable and verifies the
     layout gmeta expects. TARGETS: kraken2 centrifuge kaiju metaphlan kmcp
-    sylph taxdump host (default: all).
+    sylph taxdump host refs (default: all except refs). The refs target
+    needs --taxids or --missing-refs.
     """
     from gmeta.config import DB_DIR
     from gmeta.dbfetch import TARGET_HELP, TARGETS, write_fetch_scripts
 
-    wanted = sorted(TARGETS) if not targets or "all" in targets else list(targets)
-    scripts = write_fetch_scripts(wanted, out_dir, str(Path(db_root) if db_root else DB_DIR))
+    refs_taxids: list[str] = []
+    if taxids:
+        refs_taxids += [t.strip() for t in taxids.split(",") if t.strip()]
+    if missing_refs:
+        for lineno, line in enumerate(Path(missing_refs).read_text().splitlines()):
+            if not line.strip() or (lineno == 0 and line.lower().startswith("sample_id")):
+                continue
+            cols = line.split("\t")
+            if len(cols) >= 2 and cols[1].strip().isdigit():
+                refs_taxids.append(cols[1].strip())
+    refs_taxids = list(dict.fromkeys(refs_taxids))  # de-dupe, keep order
+
+    if "refs" in targets and not refs_taxids:
+        raise click.UsageError("the refs target needs --taxids or --missing-refs")
+    if refs_taxids and "refs" not in targets and "all" not in targets:
+        raise click.UsageError("--taxids/--missing-refs are only used with the refs target")
+
+    if not targets or "all" in targets:
+        wanted = sorted(TARGETS)
+        if refs_taxids:
+            wanted.append("refs")
+    else:
+        wanted = list(targets)
+
+    try:
+        scripts = write_fetch_scripts(
+            wanted,
+            out_dir,
+            str(Path(db_root) if db_root else DB_DIR),
+            refs_taxids=refs_taxids or None,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
 
     _info(f"generated {len(scripts)} script(s) in {out_dir} — review, then run:")
     for script in scripts:

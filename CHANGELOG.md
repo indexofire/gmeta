@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `gmeta db fetch refs`：为覆盖度计算自动生成 NCBI 参考基因组下载脚本。来源支持 `--taxids 562,662` 或 `--missing-refs missing.tsv`（即 `net build --missing-refs-out` 的输出）；脚本按 `<taxid>_<accession>.fna` 安装并生成 `refs/manifest.csv`，`--ref-dir` 可直接使用。需要 NCBI datasets CLI。
+
 ## [0.1.2] - 2026-11-24
 
 ### Fixed

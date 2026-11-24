@@ -238,6 +238,50 @@ echo "     use with: gmeta run ... --host-index $DEST/grch38"
     )
 
 
+def _refs_script(db_root: str, taxids: list[str]) -> str:
+    body = """\
+# --- coverage reference genomes (NCBI datasets) -------------------------
+# One genome per taxid, renamed to <taxid>_<accession>.fna so `--ref-dir`
+# matches without a manifest; manifest.csv is written alongside as well.
+# Requires the NCBI datasets CLI:  pip install ncbi-datasets-pylib
+#   (or conda: install -c bioconda ncbi-datasets-cli)
+command -v datasets >/dev/null 2>&1 || {
+    echo "ERROR: NCBI datasets CLI not on PATH (pip install ncbi-datasets-pylib)" >&2
+    exit 1
+}
+DEST="$DB_ROOT/refs"
+mkdir -p "$DEST"
+MANIFEST="$DEST/manifest.csv"
+[ -f "$MANIFEST" ] || echo "accession,species_taxid,organism_taxid,scientific_name,file_path" > "$MANIFEST"
+
+for taxid in \\
+__TAXIDS__
+do
+    acc=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null \\
+        | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["accessions"]["assembly"])')
+    name=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null \\
+        | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["organism"]["organism_name"].replace(",", " "))')
+    [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid" >&2; continue; }
+    if [ -f "$DEST/${taxid}_${acc}.fna" ]; then
+        echo "skip taxid $taxid ($acc already present)"
+        continue
+    fi
+    tmp=$(mktemp -d)
+    echo ">> taxid $taxid -> $acc ($name)"
+    datasets download genome accession "$acc" --include genome \\
+        --filename "$tmp/g.zip" >/dev/null
+    unzip -q -o "$tmp/g.zip" -d "$tmp/x"
+    find "$tmp/x" -name '*.fna' -exec cp {} "$DEST/${taxid}_${acc}.fna" \\;
+    rm -rf "$tmp"
+    echo "$acc,$taxid,$taxid,\\"$name\\",$DEST/${taxid}_${acc}.fna" >> "$MANIFEST"
+done
+echo "OK: references in $DEST (manifest: $MANIFEST)"
+echo "    use with: gmeta net build ... --ref-dir $DEST --manifest $MANIFEST"
+"""
+    body = body.replace("__TAXIDS__", "\n".join(taxids))
+    return _script(body, db_root)
+
+
 TARGETS: dict[str, object] = {
     "kraken2": _kraken2,
     "centrifuge": _centrifuge,
@@ -258,6 +302,7 @@ TARGET_HELP = {
     "sylph": "GTDB species sketch (.syldb)",
     "taxdump": "NCBI new_taxdump",
     "host": "GRCh38 + bowtie2 index (host removal)",
+    "refs": "coverage reference genomes for the given taxids (NCBI datasets)",
 }
 
 
@@ -265,19 +310,27 @@ def write_fetch_scripts(
     targets: list[str],
     out_dir: str | Path,
     db_root: str,
+    *,
+    refs_taxids: list[str] | None = None,
 ) -> list[Path]:
     """Write ``fetch-<target>.sh`` scripts + a ``run_all.sh``; returns paths."""
-    unknown = [t for t in targets if t not in TARGETS]
+    valid = set(TARGETS) | {"refs"}
+    unknown = [t for t in targets if t not in valid]
     if unknown:
         raise ValueError(
-            f"unknown fetch target(s): {', '.join(unknown)}; available: {', '.join(TARGETS)}"
+            f"unknown fetch target(s): {', '.join(unknown)}; available: {', '.join(sorted(valid))}"
         )
+    if "refs" in targets and not refs_taxids:
+        raise ValueError("the refs target needs refs_taxids (use --taxids/--missing-refs)")
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for target in targets:
-        body: str = TARGETS[target](db_root)  # type: ignore[operator]
+        if target == "refs":
+            body = _refs_script(db_root, list(refs_taxids or []))
+        else:
+            body = str(TARGETS[target](db_root))  # type: ignore[operator]
         script = out / f"fetch-{target}.sh"
         script.write_text(body, encoding="utf-8")
         script.chmod(0o755)

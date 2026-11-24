@@ -43,6 +43,24 @@ generation time) and verifies the layout gmeta's resolvers expect.
 automatically, then exits with instructions for the manual database copy —
 re-run it after the manual step to finish verification.
 
+### Coverage references in one step
+
+For 种基因组覆盖度 you need per-species reference FASTAs. Instead of
+fetching by hand, feed the missing list from `net build` back into
+`db fetch refs`:
+
+```bash
+gmeta net build kraken/*.report --reads-dir raw_reads --ref-dir refs \
+  -o 识别网上报.xlsx --missing-refs-out missing_refs.tsv
+gmeta db fetch refs --missing-refs missing_refs.tsv -O scripts/
+bash scripts/fetch-refs.sh        # NCBI datasets: one genome per taxid
+```
+
+The script installs `refs/<taxid>_<accession>.fna` (matched by `--ref-dir`
+without a manifest) and appends to `refs/manifest.csv`. Requires
+`pip install ncbi-datasets-pylib` (or conda `ncbi-datasets-cli`). You can
+also pass explicit taxids: `--taxids 562,662`.
+
 URLs move with releases; every URL sits in a variable at the top of its
 script with upstream links in comments.
 

@@ -40,6 +40,22 @@ bash scripts/run_all.sh           # 或按顺序全部执行
 `fetch-kmcp.sh` 会自动下载 NCBI taxdump，然后给出手动下载数据库的说明退出——
 手动步骤完成后重跑脚本即可完成校验。
 
+### 一步补齐覆盖度参考基因组
+
+种基因组覆盖度需要各物种的参考基因组 FASTA。无需手工准备：把 `net build`
+输出的缺失清单喂回 `db fetch refs`：
+
+```bash
+gmeta net build kraken/*.report --reads-dir raw_reads --ref-dir refs \
+  -o 识别网上报.xlsx --missing-refs-out missing_refs.tsv
+gmeta db fetch refs --missing-refs missing_refs.tsv -O scripts/
+bash scripts/fetch-refs.sh        # NCBI datasets：每 taxid 一个基因组
+```
+
+脚本按 `refs/<taxid>_<accession>.fna` 安装（`--ref-dir` 无需 manifest 即可
+匹配），并追加写入 `refs/manifest.csv`。需要 `pip install ncbi-datasets-pylib`
+（或 conda `ncbi-datasets-cli`）。也可直接指定：`--taxids 562,662`。
+
 URL 会随版本更新而变化；每个 URL 都放在脚本顶部的变量里，注释中附上游链接。
 
 ## 种基因组覆盖度的参考基因组
