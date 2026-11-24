@@ -57,6 +57,36 @@ def _threads_option(help_text: str):
     return decorate
 
 
+# Generic artifact names written by gmeta run / profilers; when a file is
+# called one of these, the sample id comes from its directory instead
+# (gmeta-out/<sample>/pipeline/kreport.txt → <sample>).
+_GENERIC_PROFILE_STEMS = frozenset(
+    {"kreport", "bracken", "profile", "kaiju", "species", "genus", "centrifuge", "search"}
+)
+
+
+def _sample_id_from_profile(path: str | Path) -> str:
+    """Sample id for a profiler output file.
+
+    Specific filenames win (``FZZJ26HZSC0015.report`` → that id). Generic
+    artifact names produced by ``gmeta run`` (``<outdir>/<sample>/pipeline/
+    kreport.txt``) take the sample directory; otherwise the stem is kept.
+    """
+    p = Path(path)
+    stem = p.stem
+    for suffix in (".kreport", ".report", ".profile", ".tsv"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+    if (
+        (stem.lower() in _GENERIC_PROFILE_STEMS or not stem)
+        and p.parent.name == "pipeline"
+        and p.parent.parent.name
+    ):
+        return p.parent.parent.name
+    return stem
+
+
 @click.group(
     context_settings=HELP_SETTINGS,
     invoke_without_command=True,
@@ -619,11 +649,7 @@ def net_build(
 
     all_rows: list[NetworkRow] = []
     for path in profiles:
-        sample_id = Path(path).stem
-        for suffix in (".kreport", ".report", ".profile", ".tsv"):
-            if sample_id.endswith(suffix):
-                sample_id = sample_id[: -len(suffix)]
-                break
+        sample_id = _sample_id_from_profile(path)
         try:
             rows, missing, detected = profile_to_network_rows(
                 path,
