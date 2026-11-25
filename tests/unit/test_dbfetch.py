@@ -83,6 +83,55 @@ def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
         assert result.returncode == 0, f"{script.name}: {result.stderr}"
 
 
+def test_refs_script_end_to_end(tmp_path: Path, monkeypatch) -> None:
+    """Run the generated script against a fake `datasets` CLI.
+
+    The fake emits the real NCBI summary schema (top-level ``accession``) so
+    a parsing regression fails here instead of on a user's machine.
+    """
+    import os
+    import subprocess
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake = bin_dir / "datasets"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        'case "$1" in\n'
+        "  summary)\n"
+        '    echo \'{"accession":"GCF_000005845.2","organism":'
+        '{"organism_name":"Escherichia coli str. K-12, substr. MG1655"}}\'\n'
+        "    ;;\n"
+        "  download)\n"
+        '    out=""; prev=""\n'
+        '    for a in "$@"; do [ "$prev" = "--filename" ] && out="$a"; prev="$a"; done\n'
+        '    python3 - "$out" <<PY\n'
+        "import sys, zipfile\n"
+        "with zipfile.ZipFile(sys.argv[1], 'w') as z:\n"
+        "    z.writestr('ncbi_dataset/data/GCF_000005845.2/"
+        "GCF_000005845.2_genomic.fna', '>chr1\\nACGTACGT\\n')\n"
+        "PY\n"
+        "    ;;\n"
+        "esac\n"
+    )
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ['PATH']}")
+
+    write_fetch_scripts(["refs"], tmp_path / "s", str(tmp_path / "db"), refs_taxids=["562"])
+    result = subprocess.run(
+        ["bash", str(tmp_path / "s" / "fetch-refs.sh")], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert "WARN" not in result.stderr
+
+    refs = tmp_path / "db" / "refs"
+    assert (refs / "562_GCF_000005845.2.fna").is_file()
+    manifest = (refs / "manifest.csv").read_text()
+    assert manifest.splitlines()[0].startswith("accession,species_taxid")
+    assert "GCF_000005845.2,562,562," in manifest
+    assert "Escherichia coli" in manifest
+
+
 def test_cli_db_fetch_refs(tmp_path: Path) -> None:
     from click.testing import CliRunner
 

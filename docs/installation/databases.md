@@ -1,10 +1,9 @@
 # Databases
 
-gmeta resolves every database under one root. The default is location-aware:
-a repo checkout uses `<repo>/data/db` (gitignored), an installed package
-uses the XDG data home (`~/.local/share/gmeta/db`) — databases are
-tens-of-GB external downloads and never live inside the package. Override
-with `GMETA_DB_DIR` or `-D`:
+gmeta resolves every database under one root. The default is always outside
+the code: the XDG data home (`~/.local/share/gmeta/db`) — databases are
+tens-of-GB external downloads and never live in the package or the repo.
+For servers, set `GMETA_DB_DIR` (or `-D`) to a data volume:
 
 | Tool | Expected under `$DB_DIR/` | Required files |
 | --- | --- | --- |

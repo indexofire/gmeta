@@ -34,7 +34,7 @@ installation paths cover every scenario:
 | --- | --- |
 | `src/gmeta/data/` | Chinese name tables, priority pathogen list |
 | `src/gmeta/templates/` | Jinja2 report template (HTML and PDF share it) |
-| `$GMETA_DB_DIR` | databases (repo: `<repo>/data/db`; installed: `~/.local/share/gmeta/db`) |
+| `$GMETA_DB_DIR` | databases (default `~/.local/share/gmeta/db`, always outside the code) |
 
 ## Next steps
 

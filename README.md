@@ -87,7 +87,7 @@ gmeta net build kraken/*.report \
 ```bash
 gmeta db list                       # 查看数据库位置与状态
 gmeta db fetch                      # 生成全部数据库下载脚本 → ./db-fetch/
-gmeta db fetch kraken2 kmcp -O scripts/ --db-root /data/db   # 数据库默认: <repo>/data/db（仓库）或 ~/.local/share/gmeta/db（pip 安装），GMETA_DB_DIR 可覆盖
+gmeta db fetch kraken2 kmcp -O scripts/ --db-root /data/db   # 数据库默认 ~/.local/share/gmeta/db（代码目录之外），GMETA_DB_DIR 可覆盖
 bash scripts/fetch-kraken2.sh       # 审查 URL 后自行运行（可断点续传）
 bash scripts/run_all.sh             # 或按顺序全部执行
 ```

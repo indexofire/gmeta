@@ -263,11 +263,21 @@ __TAXIDS__
 EOF
 )
 do
-    # prefer the reference/representative assembly; fall back to the first hit
-    summary=$(datasets summary genome taxid "$taxid" --reference --as-json-lines 2>/dev/null | head -n 1) || summary=""
-    [ -n "$summary" ] || summary=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null | head -n 1) || summary=""
-    acc=$(printf '%s' "$summary" | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["accessions"]["assembly"])' 2>/dev/null) || acc=""
-    name=$(printf '%s' "$summary" | python3 -c 'import sys,json; r=json.loads(sys.stdin.readline()); print(r["organism"]["organism_name"].replace(",", " "))' 2>/dev/null) || name=""
+    # prefer the reference/representative assembly; fall back to any assembly
+    summary=$(datasets summary genome taxid "$taxid" --reference --as-json-lines 2>/dev/null) || summary=""
+    [ -n "$summary" ] || summary=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null) || summary=""
+    parsed=$(printf '%s\n' "$summary" | python3 -c '
+import json, sys
+line = sys.stdin.readline()
+if not line.strip():
+    sys.exit(0)
+r = json.loads(line)
+acc = r.get("accession") or (r.get("accessions") or {}).get("assembly") or ""
+name = (r.get("organism") or {}).get("organism_name") or ""
+print(acc + "\\t" + name.replace(",", " "))
+' 2>/dev/null) || parsed=""
+    acc=$(printf '%s' "$parsed" | cut -f1)
+    name=$(printf '%s' "$parsed" | cut -f2)
     [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid" >&2; continue; }
     if [ -f "$DEST/${taxid}_${acc}.fna" ]; then
         echo "skip taxid $taxid ($acc already present)"

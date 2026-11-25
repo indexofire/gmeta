@@ -30,7 +30,7 @@ gmeta 是一个驱动外部生信工具的 Python 3.12 包。两种安装方式�
 | --- | --- |
 | `src/gmeta/data/` | 中文名映射表、重点病原列表 |
 | `src/gmeta/templates/` | Jinja2 报告模板（HTML 与 PDF 共用） |
-| `$GMETA_DB_DIR` | 数据库根目录（仓库检出：`<repo>/data/db`；pip 安装：`~/.local/share/gmeta/db`） |
+| `$GMETA_DB_DIR` | 数据库根目录（默认 `~/.local/share/gmeta/db`，始终在代码目录之外） |
 
 ## 下一步
 

@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `db fetch refs` 脚本解析修正：NCBI `datasets summary` 的 accession 是顶层字段 `accession`（不是 `accessions.assembly`），修复后逐 taxid 正确下载；解析改一次 summary 提取 accession+物种名，`--reference` 优先参考/代表基因组。
+
+### Changed
+
+- 数据库根目录默认改为始终在代码目录之外：`$XDG_DATA_HOME/gmeta/db`（默认 `~/.local/share/gmeta/db`），仓库检出不再落到 `<repo>/data/db`；`GMETA_DB_DIR` 仍最优先（服务器建议显式设置到数据盘）。
+
 ### Added
 
 - `gmeta db fetch refs`：为覆盖度计算自动生成 NCBI 参考基因组下载脚本。来源支持 `--taxids 562,662` 或 `--missing-refs missing.tsv`（即 `net build --missing-refs-out` 的输出）；脚本按 `<taxid>_<accession>.fna` 安装并生成 `refs/manifest.csv`，`--ref-dir` 可直接使用。需要 NCBI Datasets **CLI**（`datasets`，conda-forge `ncbi-datasets-cli` 或独立二进制；Python `pylib` 已弃用），脚本优先取参考/代表基因组。

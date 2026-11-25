@@ -19,16 +19,13 @@ PROJECT_ROOT = PACKAGE_ROOT.parent.parent
 
 
 def _default_db_dir(package_root: Path, project_root: Path) -> Path:
-    """Databases are large external downloads — never inside the package.
+    """Databases are large external downloads — never inside the package or repo.
 
-    Repo checkout (pixi.toml beside the package) → ``<repo>/data/db``;
-    installed package (site-packages) → the XDG data home
-    (``$XDG_DATA_HOME/gmeta/db``, default ``~/.local/share/gmeta/db``),
-    because site-packages is no place for tens of gigabytes and would not
-    survive upgrades.
+    Default: the XDG data home (``$XDG_DATA_HOME/gmeta/db``, falling back to
+    ``~/.local/share/gmeta/db``). Override with ``GMETA_DB_DIR`` — the
+    recommended setup for servers, where databases usually live on a data
+    volume.
     """
-    if (project_root / "pixi.toml").is_file():
-        return project_root / "data" / "db"
     xdg = os.environ.get("XDG_DATA_HOME", "")
     base = Path(xdg) if xdg else Path.home() / ".local" / "share"
     return base / "gmeta" / "db"
