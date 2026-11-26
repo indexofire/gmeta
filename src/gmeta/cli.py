@@ -68,11 +68,20 @@ _GENERIC_PROFILE_STEMS = frozenset(
 def _sample_id_from_profile(path: str | Path) -> str:
     """Sample id for a profiler output file.
 
-    Specific filenames win (``FZZJ26HZSC0015.report`` → that id). Generic
-    artifact names produced by ``gmeta run`` (``<outdir>/<sample>/pipeline/
-    kreport.txt``) take the sample directory; otherwise the stem is kept.
+    Priority: the ``sample.json`` written by ``gmeta run`` beside its
+    artifacts (exact id even when the output directory is named differently),
+    then a specific filename (``FZZJ26HZSC0015.report`` → that id), then the
+    ``<outdir>/<sample>/pipeline/`` directory, otherwise the stem.
     """
     p = Path(path)
+    recorded = p.parent / "sample.json"
+    if recorded.is_file():
+        try:
+            sample_id = json.loads(recorded.read_text(encoding="utf-8")).get("sample_id")
+        except (OSError, ValueError):
+            sample_id = None
+        if sample_id:
+            return str(sample_id)
     stem = p.stem
     for suffix in (".kreport", ".report", ".profile", ".tsv"):
         if stem.endswith(suffix):
@@ -344,6 +353,11 @@ def _run_pipeline(
         report.qc.host_reads = host_stats.host_reads
         report.qc.host_rate = host_stats.host_rate
 
+    # record the sample id beside the artifacts: the output directory name may
+    # not match the reads prefix (gmeta run -s X -O arbitrary_dir)
+    (work / "sample.json").write_text(
+        json.dumps({"sample_id": sample_id}), encoding="utf-8"
+    )
     # artifacts (kreport/bracken/profile/tables) live under work/ — record them
     for name in (
         "kreport.txt",
@@ -838,15 +852,27 @@ def net_build(
                     f"auto-detected reads: {', '.join(Path(r).name for r in reads)}"
                 )
         if reads is None:
+            from gmeta.analysis.coverage import read_groups
+
+            groups = read_groups(reads_dir)
+            if len(groups) == 1:  # single-sample reads dir: use the only group
+                only_base, only_files = next(iter(groups.items()))
+                reads = only_files
+                _info(
+                    f"[{sample_id}] no FASTQ matches {sample_id!r}; "
+                    f"using the only reads group found: {only_base}"
+                )
+        if reads is None:
             sample_pattern = reads_pattern.format(sample=sample_id, pair="1")
-            similar = sorted(p.name for p in Path(reads_dir).glob(f"{sample_id}*") if p.is_file())[
-                :3
-            ]
-            hint = f"; files starting with {sample_id!r}: {', '.join(similar)}" if similar else ""
+            from gmeta.analysis.coverage import read_groups
+
+            groups = read_groups(reads_dir)
+            candidates = ", ".join(sorted(groups)[:5]) + ("…" if len(groups) > 5 else "")
+            hint = f"; FASTQ groups in the dir: {candidates}" if candidates else ""
             _info(
                 f"[{sample_id}] no reads found — coverage left blank "
                 f"(looked for {Path(reads_dir) / sample_pattern}{hint}; "
-                "adjust --reads-pattern or check the sample id matches the filename)"
+                "adjust --reads-pattern, --sample-id, or check the sample id)"
             )
             for row in rows:
                 row.coverage_status = "缺reads"

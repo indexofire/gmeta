@@ -361,6 +361,37 @@ def _belongs(name: str, sample: str) -> bool:
     return base == marker or base.startswith((marker + "_", marker + "."))
 
 
+def read_groups(reads_dir: str | Path) -> dict[str, list[str]]:
+    """Group FASTQs in a directory by mate base (or file stem for singles).
+
+    Used as a last-resort fallback: when a sample id matches nothing but the
+    directory holds exactly one read group, that group is used (with a
+    message); with several groups the names are listed so the user can pick
+    one via --sample-id/--reads-pattern.
+    """
+    from gmeta.samples import mate_key
+
+    base_dir = Path(reads_dir)
+    if not base_dir.is_dir():
+        return {}
+    pairs: dict[str, dict[int, str]] = {}
+    singles: dict[str, str] = {}
+    for path in sorted(base_dir.iterdir()):
+        if not (path.is_file() and _is_fastq(path)):
+            continue
+        key = mate_key(str(path))
+        if key is None:
+            singles[path.stem.lower()] = str(path)
+            continue
+        pairs.setdefault(key[0].lower(), {})[key[1]] = str(path)
+    groups: dict[str, list[str]] = {
+        base: [mates[index] for index in sorted(mates)] for base, mates in pairs.items()
+    }
+    for stem, path in singles.items():
+        groups.setdefault(stem, [path])
+    return groups
+
+
 def discover_reads_auto(reads_dir: str | Path, sample: str) -> list[str] | None:
     """Find a sample's FASTQ files by name prefix + mate markers.
 
@@ -416,5 +447,6 @@ __all__ = [
     "discover_reads_auto",
     "fasta_sequence_lengths",
     "load_manifest",
+    "read_groups",
     "resolve_reference",
 ]

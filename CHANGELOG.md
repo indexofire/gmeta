@@ -16,6 +16,7 @@
 
 ### Fixed
 
+- 覆盖度"丢样本"根因修复：`gmeta run` 在 `<outdir>/<sample>/pipeline/sample.json` 记录准确样本号，`net build` 优先读取——输出目录名与样本号不同（如 `-O output2 -s 26AS311`）时不再推错样本号导致 `缺reads`。另外：样本号匹配不到但 reads 目录只有一组 FASTQ 时自动采用（带提示）；多组时列出组名便于用 `--sample-id`/`--reads-pattern` 指定。
 - `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary genome taxon <数字taxid>` 取参考/代表基因组 → `datasets download genome accession`）。注意 v16+ CLI **没有 `taxid` 子命令**，数字 taxid 走 `taxon`。兼容输出/标志差异（`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持情况），解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。fake-CLI 端到端测试严格模拟 v18 行为（误用 taxid 会失败）。
 
 ### Changed

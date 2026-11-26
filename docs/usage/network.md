@@ -58,6 +58,13 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 
 Notes:
 
+- `gmeta run` records the exact sample id in `<outdir>/<sample>/pipeline/sample.json`;
+  `net build` reads it first, so coverage reads are matched even when the
+  output directory is named differently from the sample (e.g.
+  `-O output2 -s 26AS311`). `--sample-id` remains the explicit override.
+- If nothing matches the sample id but the reads dir holds exactly **one**
+  FASTQ group, that group is used with a message; with several groups their
+  names are listed so you can pick one via `--sample-id`/`--reads-pattern`.
 - `--auto-refs` needs the NCBI Datasets CLI (`datasets`) on PATH — install
   it with `conda install -c conda-forge ncbi-datasets-cli` or the standalone
   binary (see [Databases](../installation/databases.md)). Without network

@@ -109,3 +109,44 @@ def test_net_build_jobs_preserves_order(kreport_file: Path, tmp_path: Path) -> N
     samples = [ws.cell(row=r, column=1).value for r in range(2, ws.max_row + 1)]
     # first row of each group carries the sample id, in input order
     assert [s for s in samples if s] == ["A", "B"]
+
+
+def test_net_build_single_read_group_fallback(kreport_file: Path, tmp_path: Path) -> None:
+    """No sample-id match, but only one read group in the dir → use it."""
+    reads = tmp_path / "reads"
+    reads.mkdir()
+    (reads / "OTHER_R1.fq").write_text("@r\nACGT\n+\nIIII\n")
+    (reads / "OTHER_R2.fq").write_text("@r\nACGT\n+\nIIII\n")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "net", "build", str(kreport_file),
+            "--reads-dir", str(reads),
+            "--top", "2",
+            "-o", str(tmp_path / "x.xlsx"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "using the only reads group found: other" in result.output
+
+
+def test_net_build_lists_read_group_candidates(kreport_file: Path, tmp_path: Path) -> None:
+    reads = tmp_path / "reads"
+    reads.mkdir()
+    for base in ("ALPHA", "BETA"):
+        (reads / f"{base}_R1.fq").write_text("@r\nACGT\n+\nIIII\n")
+        (reads / f"{base}_R2.fq").write_text("@r\nACGT\n+\nIIII\n")
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "net", "build", str(kreport_file),
+            "--reads-dir", str(reads),
+            "--top", "2",
+            "-o", str(tmp_path / "x.xlsx"),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "FASTQ groups in the dir" in result.output
+    assert "alpha" in result.output and "beta" in result.output

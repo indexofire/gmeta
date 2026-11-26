@@ -24,3 +24,22 @@ def test_generic_artifact_uses_gmeta_run_layout(tmp_path: Path) -> None:
 def test_plain_generic_name_keeps_stem(tmp_path: Path) -> None:
     # outside a run layout there is no reliable sample id in the path
     assert _sample_id_from_profile(tmp_path / "kreports" / "SAMPLE-A" / "kreport.txt") == "kreport"
+
+
+def test_sample_json_wins_over_directory_name(tmp_path: Path) -> None:
+    """gmeta run records the exact sample id even in arbitrarily named dirs."""
+    pipeline = tmp_path / "output2" / "pipeline"
+    pipeline.mkdir(parents=True)
+    (pipeline / "sample.json").write_text('{"sample_id": "26AS311"}')
+    kreport = pipeline / "kreport.txt"
+    kreport.write_text("")
+    assert _sample_id_from_profile(kreport) == "26AS311"
+
+
+def test_sample_json_garbage_falls_back(tmp_path: Path) -> None:
+    pipeline = tmp_path / "S1" / "pipeline"
+    pipeline.mkdir(parents=True)
+    (pipeline / "sample.json").write_text("not json")
+    kreport = pipeline / "kreport.txt"
+    kreport.write_text("")
+    assert _sample_id_from_profile(kreport) == "S1"

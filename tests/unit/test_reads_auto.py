@@ -59,3 +59,15 @@ def test_no_match_and_missing_dir(tmp_path: Path) -> None:
     _fastq(tmp_path / "other_R1.fq.gz")
     assert discover_reads_auto(tmp_path, "S1") is None
     assert discover_reads_auto(tmp_path / "nowhere", "S1") is None
+
+
+def test_read_groups_pairs_and_singles(tmp_path: Path) -> None:
+    from gmeta.analysis.coverage import read_groups
+
+    _fastq(tmp_path / "A_R1.fq.gz")
+    _fastq(tmp_path / "A_R2.fq.gz")
+    _fastq(tmp_path / "single.fastq")
+    groups = read_groups(tmp_path)
+    assert set(groups) == {"a", "single"}
+    assert [p.rsplit("/", 1)[-1] for p in groups["a"]] == ["A_R1.fq.gz", "A_R2.fq.gz"]
+    assert len(groups["single"]) == 1

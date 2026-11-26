@@ -55,6 +55,11 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 
 注意：
 
+- `gmeta run` 会把准确的样本号写进 `<outdir>/<sample>/pipeline/sample.json`；
+  `net build` 优先读取它，因此输出目录名与样本号不同（如
+  `-O output2 -s 26AS311`）时也能正确匹配 reads。`--sample-id` 仍是显式覆盖。
+- 样本号匹配不到、但 reads 目录里只有**一组** FASTQ 时，自动采用该组并打印提示；
+  有多组时列出组名，用 `--sample-id`/`--reads-pattern` 指定。
 - `--auto-refs` 需要 PATH 中有 NCBI Datasets CLI（`datasets`；安装：
   `conda install -c conda-forge ncbi-datasets-cli` 或独立二进制，见
   [数据库](../installation/databases.zh.md)）。无网络时退回手动闭环：先跑一次
