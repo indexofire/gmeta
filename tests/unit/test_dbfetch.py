@@ -57,15 +57,16 @@ def test_refs_script_content(tmp_path: Path) -> None:
     written = write_fetch_scripts(["refs"], tmp_path, "/data/db", refs_taxids=["562", "662"])
     body = (tmp_path / "fetch-refs.sh").read_text()
     assert written[0].name == "fetch-refs.sh"
-    assert "datasets summary genome taxid" in body
-    assert "datasets download genome accession" in body
+    # pure HTTP API path: curl + python3 only, no NCBI CLI requirement
+    assert "api.ncbi.nlm.nih.gov/datasets/v2" in body
+    assert "dataset_report" in body
+    assert "genome/accession" in body
+    assert "python3 -m zipfile -e" in body
+    assert "datasets summary" not in body
     assert "562\n662" in body
     assert "manifest.csv" in body
     assert "--ref-dir" in body
-    # CLI (not the deprecated Python pylib) is the documented requirement
-    assert "ncbi-datasets-cli" in body
-    assert "pylib is deprecated" in body
-    assert "--reference" in body  # prefer reference/representative assembly
+    assert "NCBI_API_KEY" in body  # optional rate-limit key
 
 
 def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
@@ -84,27 +85,29 @@ def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
 
 
 def test_refs_script_end_to_end(tmp_path: Path, monkeypatch) -> None:
-    """Run the generated script against a fake `datasets` CLI.
+    """Run the generated script against a fake `curl`.
 
-    The fake emits the real NCBI summary schema (top-level ``accession``) so
-    a parsing regression fails here instead of on a user's machine.
+    The fake emits the real NCBI Datasets API responses (``reports[].accession``
+    and ``organism.organism_name``; a ZIP for the download endpoint) so
+    parsing or flow regressions fail here instead of on a user's machine.
     """
     import os
     import subprocess
 
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    fake = bin_dir / "datasets"
+    fake = bin_dir / "curl"
     fake.write_text(
         "#!/usr/bin/env bash\n"
-        'case "$1" in\n'
-        "  summary)\n"
-        '    echo \'{"accession":"GCF_000005845.2","organism":'
-        '{"organism_name":"Escherichia coli str. K-12, substr. MG1655"}}\'\n'
+        'url="${@: -1}"\n'
+        'case "$url" in\n'
+        "  *dataset_report*)\n"
+        '    echo \'{"reports":[{"accession":"GCF_000005845.2","organism":'
+        '{"organism_name":"Escherichia coli str. K-12, substr. MG1655"}}]}\'\n'
         "    ;;\n"
-        "  download)\n"
+        "  *download*)\n"
         '    out=""; prev=""\n'
-        '    for a in "$@"; do [ "$prev" = "--filename" ] && out="$a"; prev="$a"; done\n'
+        '    for a in "$@"; do [ "$prev" = "-o" ] && out="$a"; prev="$a"; done\n'
         '    python3 - "$out" <<PY\n'
         "import sys, zipfile\n"
         "with zipfile.ZipFile(sys.argv[1], 'w') as z:\n"

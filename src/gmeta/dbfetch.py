@@ -240,23 +240,29 @@ echo "     use with: gmeta run ... --host-index $DEST/grch38"
 
 def _refs_script(db_root: str, taxids: list[str]) -> str:
     body = """\
-# --- coverage reference genomes (NCBI datasets CLI) ---------------------
-# One genome per taxid, renamed to <taxid>_<accession>.fna so `--ref-dir`
-# matches without a manifest; manifest.csv is written alongside as well.
-# Requires the NCBI Datasets CLI v2 (`datasets` binary, no Python library):
-#   conda install -c conda-forge ncbi-datasets-cli
-#   or download: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/
-# (ncbi-datasets-pylib is deprecated upstream — the CLI is the supported path.)
-command -v datasets >/dev/null 2>&1 || {
-    echo "ERROR: NCBI Datasets CLI not on PATH." >&2
-    echo "  conda install -c conda-forge ncbi-datasets-cli" >&2
-    echo "  or: curl -o datasets https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets && chmod +x datasets" >&2
-    exit 1
-}
+# --- coverage reference genomes (NCBI Datasets HTTP API) ----------------
+# No NCBI CLI needed: only curl + python3 (zipfile handles extraction).
+# Optional: export NCBI_API_KEY to raise the API rate limit.
+API="https://api.ncbi.nlm.nih.gov/datasets/v2"
+KEY=""
+[ -n "${NCBI_API_KEY:-}" ] && KEY="&api_key=$NCBI_API_KEY"
+
 DEST="$DB_ROOT/refs"
 mkdir -p "$DEST"
 MANIFEST="$DEST/manifest.csv"
 [ -f "$MANIFEST" ] || echo "accession,species_taxid,organism_taxid,scientific_name,file_path" > "$MANIFEST"
+
+parse_report() {
+    python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+reports = d.get("reports") or []
+if not reports:
+    sys.exit(0)
+r = reports[0]
+print((r.get("accession") or "") + "\\t" + ((r.get("organism") or {}).get("organism_name") or "").replace(",", " "))
+'
+}
 
 for taxid in $(cat <<'EOF'
 __TAXIDS__
@@ -264,30 +270,27 @@ EOF
 )
 do
     # prefer the reference/representative assembly; fall back to any assembly
-    summary=$(datasets summary genome taxid "$taxid" --reference --as-json-lines 2>/dev/null) || summary=""
-    [ -n "$summary" ] || summary=$(datasets summary genome taxid "$taxid" --as-json-lines 2>/dev/null) || summary=""
-    parsed=$(printf '%s\n' "$summary" | python3 -c '
-import json, sys
-line = sys.stdin.readline()
-if not line.strip():
-    sys.exit(0)
-r = json.loads(line)
-acc = r.get("accession") or (r.get("accessions") or {}).get("assembly") or ""
-name = (r.get("organism") or {}).get("organism_name") or ""
-print(acc + "\\t" + name.replace(",", " "))
-' 2>/dev/null) || parsed=""
+    report=$(curl -fsS "$API/genome/taxon/$taxid/dataset_report?filters.reference_only=true&page_size=1$KEY" 2>/dev/null) || report=""
+    parsed=$(printf '%s' "$report" | parse_report 2>/dev/null) || parsed=""
+    if [ -z "$parsed" ]; then
+        report=$(curl -fsS "$API/genome/taxon/$taxid/dataset_report?page_size=1$KEY" 2>/dev/null) || report=""
+        parsed=$(printf '%s' "$report" | parse_report 2>/dev/null) || parsed=""
+    fi
     acc=$(printf '%s' "$parsed" | cut -f1)
     name=$(printf '%s' "$parsed" | cut -f2)
-    [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid" >&2; continue; }
+    [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid (check for a merged/retired taxid)" >&2; continue; }
     if [ -f "$DEST/${taxid}_${acc}.fna" ]; then
         echo "skip taxid $taxid ($acc already present)"
         continue
     fi
     tmp=$(mktemp -d)
     echo ">> taxid $taxid -> $acc ($name)"
-    datasets download genome accession "$acc" --include genome \\
-        --filename "$tmp/g.zip" >/dev/null
-    unzip -q -o "$tmp/g.zip" -d "$tmp/x"
+    if ! curl -fsS -o "$tmp/g.zip" "$API/genome/accession/$acc/download?include_annotation_type=GENOME_FASTA$KEY"; then
+        echo "WARN: download failed for $acc (taxid $taxid)" >&2
+        rm -rf "$tmp"
+        continue
+    fi
+    python3 -m zipfile -e "$tmp/g.zip" "$tmp/x"
     find "$tmp/x" -name '*.fna' -exec cp {} "$DEST/${taxid}_${acc}.fna" \\;
     rm -rf "$tmp"
     echo "$acc,$taxid,$taxid,\\"$name\\",$DEST/${taxid}_${acc}.fna" >> "$MANIFEST"
