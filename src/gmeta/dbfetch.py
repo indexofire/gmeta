@@ -291,16 +291,20 @@ __TAXIDS__
 EOF
 )
 do
-    # try modern and legacy CLI dialects: reference filter first, then any assembly
+    # CLI dialects: v2 uses `taxid`; older binaries only know `taxon`
+    # (which accepts a numeric id). Flags: reference filter / JSON-lines /
+    # plain JSON vary by version too — try the combinations, first hit wins.
     parsed=""
-    for flags in "--reference --as-json-lines" "--reference" "--as-json-lines" ""; do
-        summary=$(datasets summary genome taxid "$taxid" $flags $APIKEY 2>/dev/null) || continue
-        parsed=$(printf '%s' "$summary" | parse_summary 2>/dev/null) || parsed=""
-        [ -n "$parsed" ] && break
+    for sub in taxid taxon; do
+        for flags in "--reference --as-json-lines" "--reference" "--as-json-lines" ""; do
+            summary=$(datasets summary genome $sub "$taxid" $flags $APIKEY 2>/dev/null) || continue
+            parsed=$(printf '%s' "$summary" | parse_summary 2>/dev/null) || parsed=""
+            [ -n "$parsed" ] && break 2
+        done
     done
     if [ -z "$parsed" ]; then
         cli_err=$(datasets summary genome taxid "$taxid" $APIKEY 2>&1 >/dev/null | head -n 2) || true
-        echo "WARN: no NCBI assembly for taxid $taxid (merged/retired taxid?)${cli_err:+ — CLI: $cli_err}" >&2
+        echo "WARN: no NCBI assembly for taxid $taxid (check datasets --version needs the v2 CLI; or merged/retired taxid)${cli_err:+ — CLI: $cli_err}" >&2
         continue
     fi
     acc=$(printf '%s' "$parsed" | cut -f1)

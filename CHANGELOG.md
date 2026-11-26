@@ -13,7 +13,7 @@
 
 ### Fixed
 
-- `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary` 取参考/代表基因组 → `datasets download genome accession`），兼容新旧 CLI 方言（`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持差异），解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。三种方言（现代/旧版/失败）均有 fake-CLI 端到端测试。
+- `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary` 取参考/代表基因组 → `datasets download genome accession`），兼容新旧 CLI 方言：`taxid`/`taxon` 子命令、`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持差异，解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。四种方言（现代/旧标志/旧子命令/失败）均有 fake-CLI 端到端测试。
 
 ### Changed
 

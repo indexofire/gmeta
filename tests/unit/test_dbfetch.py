@@ -87,13 +87,17 @@ def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
 
 
 def _fake_datasets(bin_dir) -> None:
-    """A fake CLI covering both dialects; LEGACY/FAIL env switches the mode."""
+    """A fake CLI covering dialects; LEGACY (JSON/flags) and OLD_SUB switches."""
 
     fake = bin_dir / "datasets"
     fake.write_text(
         "#!/usr/bin/env bash\n"
         'if [ "$1" = "summary" ]; then\n'
         '  if [ -n "${FAIL:-}" ]; then echo "error: taxon not found" >&2; exit 1; fi\n'
+        '  if [ -n "${OLD_SUB:-}" ] && [ "$3" = "taxid" ]; then\n'
+        '    echo "Error: unknown command \\"taxid\\" for \\"datasets summary genome\\"" >&2\n'
+        "    exit 1\n"
+        "  fi\n"
         '  for a in "$@"; do\n'
         '    if [ "$a" = "--as-json-lines" ] && [ -n "${LEGACY:-}" ]; then\n'
         '      echo "unknown flag: --as-json-lines" >&2; exit 1\n'
@@ -158,6 +162,14 @@ def test_refs_script_legacy_cli_dialect(tmp_path: Path, monkeypatch) -> None:
     assert "WARN" not in result.stderr
     assert (tmp_path / "db" / "refs" / "562_GCF_000005845.2.fna").is_file()
     assert "GCF_000005845.2,562,562," in (tmp_path / "db" / "refs" / "manifest.csv").read_text()
+
+
+def test_refs_script_old_subcommand_taxon(tmp_path: Path, monkeypatch) -> None:
+    """Very old CLI: no `taxid` subcommand — fall back to `taxon <id>`."""
+    result = _run_refs_script(tmp_path, monkeypatch, OLD_SUB="1", LEGACY="1")
+    assert result.returncode == 0, result.stderr
+    assert "WARN" not in result.stderr
+    assert (tmp_path / "db" / "refs" / "562_GCF_000005845.2.fna").is_file()
 
 
 def test_refs_script_cli_failure_surfaces_error(tmp_path: Path, monkeypatch) -> None:

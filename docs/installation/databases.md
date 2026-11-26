@@ -65,9 +65,13 @@ conda install -c conda-forge ncbi-datasets-cli
 ```
 
 The script tolerates CLI dialect differences (JSON-lines vs pretty JSON,
-`--reference` support) and, when a taxid fails, prints the CLI's own error
-instead of a bare warning. `export NCBI_API_KEY=…` raises the API rate
-limit for large batches. You can also pass explicit taxids: `--taxids 562,662`.
+`--reference` support, and the legacy `taxon` subcommand for old binaries)
+and, when a taxid fails, prints the CLI's own error instead of a bare
+warning. If the error is `unknown command "taxid"`, the installed binary is
+the retired v1-era CLI — upgrade it (`conda install -c conda-forge
+ncbi-datasets-cli`) or install the standalone v2 binary.
+`export NCBI_API_KEY=…` raises the API rate limit for large batches. You can
+also pass explicit taxids: `--taxids 562,662`.
 
 URLs move with releases; every URL sits in a variable at the top of its
 script with upstream links in comments.
