@@ -56,11 +56,18 @@ bash scripts/fetch-refs.sh        # NCBI datasets: one genome per taxid
 ```
 
 The script installs `refs/<taxid>_<accession>.fna` (matched by `--ref-dir`
-without a manifest) and appends to `refs/manifest.csv`. It talks to the
-**NCBI Datasets HTTP API** directly — only `curl` + `python3` are needed
-(prefers reference/representative assemblies, falls back to any assembly;
-`export NCBI_API_KEY=…` raises the API rate limit for large batches).
-You can also pass explicit taxids: `--taxids 562,662`.
+without a manifest) and appends to `refs/manifest.csv`. It uses the
+**NCBI Datasets CLI** (`datasets` binary; the Python `pylib` is deprecated
+upstream):
+
+```bash
+conda install -c conda-forge ncbi-datasets-cli
+```
+
+The script tolerates CLI dialect differences (JSON-lines vs pretty JSON,
+`--reference` support) and, when a taxid fails, prints the CLI's own error
+instead of a bare warning. `export NCBI_API_KEY=…` raises the API rate
+limit for large batches. You can also pass explicit taxids: `--taxids 562,662`.
 
 URLs move with releases; every URL sits in a variable at the top of its
 script with upstream links in comments.

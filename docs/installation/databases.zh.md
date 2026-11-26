@@ -52,9 +52,16 @@ bash scripts/fetch-refs.sh        # NCBI datasets：每 taxid 一个基因组
 ```
 
 脚本按 `refs/<taxid>_<accession>.fna` 安装（`--ref-dir` 无需 manifest 即可
-匹配），并追加写入 `refs/manifest.csv`。脚本直接调用 **NCBI Datasets HTTP API**，
-只需 `curl` + `python3`（优先参考/代表基因组，无则取任意 assembly；批量较大时
-`export NCBI_API_KEY=…` 可提高限速）。也可直接指定：`--taxids 562,662`。
+匹配），并追加写入 `refs/manifest.csv`。使用 **NCBI Datasets CLI**
+（`datasets` 命令；Python 的 `pylib` 已被官方弃用）：
+
+```bash
+conda install -c conda-forge ncbi-datasets-cli
+```
+
+脚本兼容 CLI 方言差异（JSON-lines / pretty JSON、`--reference` 支持情况），
+taxid 失败时打印 CLI 自身的错误而非干瘪的 WARN。批量较大时可
+`export NCBI_API_KEY=…` 提高限速。也可直接指定：`--taxids 562,662`。
 
 URL 会随版本更新而变化；每个 URL 都放在脚本顶部的变量里，注释中附上游链接。
 

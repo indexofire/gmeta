@@ -240,27 +240,49 @@ echo "     use with: gmeta run ... --host-index $DEST/grch38"
 
 def _refs_script(db_root: str, taxids: list[str]) -> str:
     body = """\
-# --- coverage reference genomes (NCBI Datasets HTTP API) ----------------
-# No NCBI CLI needed: only curl + python3 (zipfile handles extraction).
+# --- coverage reference genomes (NCBI Datasets CLI) ---------------------
+# One genome per taxid, renamed to <taxid>_<accession>.fna so `--ref-dir`
+# matches without a manifest; manifest.csv is written alongside as well.
+# Requires the NCBI Datasets CLI v2 (`datasets` binary):
+#   conda install -c conda-forge ncbi-datasets-cli
+#   or https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/
 # Optional: export NCBI_API_KEY to raise the API rate limit.
-API="https://api.ncbi.nlm.nih.gov/datasets/v2"
-KEY=""
-[ -n "${NCBI_API_KEY:-}" ] && KEY="&api_key=$NCBI_API_KEY"
+command -v datasets >/dev/null 2>&1 || {
+    echo "ERROR: NCBI Datasets CLI not on PATH." >&2
+    echo "  conda install -c conda-forge ncbi-datasets-cli" >&2
+    echo "  or: https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/" >&2
+    exit 1
+}
+APIKEY=""
+[ -n "${NCBI_API_KEY:-}" ] && APIKEY="--api-key $NCBI_API_KEY"
 
 DEST="$DB_ROOT/refs"
 mkdir -p "$DEST"
 MANIFEST="$DEST/manifest.csv"
 [ -f "$MANIFEST" ] || echo "accession,species_taxid,organism_taxid,scientific_name,file_path" > "$MANIFEST"
 
-parse_report() {
+# Accept both CLI output shapes: JSON lines (--as-json-lines) and a pretty
+# JSON document with a "reports" array (older/default output).
+parse_summary() {
     python3 -c '
 import json, sys
-d = json.load(sys.stdin)
-reports = d.get("reports") or []
-if not reports:
+text = sys.stdin.read().strip()
+if not text:
     sys.exit(0)
-r = reports[0]
-print((r.get("accession") or "") + "\\t" + ((r.get("organism") or {}).get("organism_name") or "").replace(",", " "))
+try:
+    doc = json.loads(text)              # whole document
+except json.JSONDecodeError:
+    doc = json.loads(text.splitlines()[0])  # JSON lines
+if isinstance(doc, dict) and "reports" in doc:
+    reports = doc.get("reports") or []
+    r = reports[0] if reports else {}
+elif isinstance(doc, dict):
+    r = doc
+else:
+    r = {}
+acc = r.get("accession") or (r.get("accessions") or {}).get("assembly") or ""
+name = (r.get("organism") or {}).get("organism_name") or ""
+print(acc + "\\t" + name.replace(",", " "))
 '
 }
 
@@ -269,23 +291,28 @@ __TAXIDS__
 EOF
 )
 do
-    # prefer the reference/representative assembly; fall back to any assembly
-    report=$(curl -fsS "$API/genome/taxon/$taxid/dataset_report?filters.reference_only=true&page_size=1$KEY" 2>/dev/null) || report=""
-    parsed=$(printf '%s' "$report" | parse_report 2>/dev/null) || parsed=""
+    # try modern and legacy CLI dialects: reference filter first, then any assembly
+    parsed=""
+    for flags in "--reference --as-json-lines" "--reference" "--as-json-lines" ""; do
+        summary=$(datasets summary genome taxid "$taxid" $flags $APIKEY 2>/dev/null) || continue
+        parsed=$(printf '%s' "$summary" | parse_summary 2>/dev/null) || parsed=""
+        [ -n "$parsed" ] && break
+    done
     if [ -z "$parsed" ]; then
-        report=$(curl -fsS "$API/genome/taxon/$taxid/dataset_report?page_size=1$KEY" 2>/dev/null) || report=""
-        parsed=$(printf '%s' "$report" | parse_report 2>/dev/null) || parsed=""
+        cli_err=$(datasets summary genome taxid "$taxid" $APIKEY 2>&1 >/dev/null | head -n 2) || true
+        echo "WARN: no NCBI assembly for taxid $taxid (merged/retired taxid?)${cli_err:+ — CLI: $cli_err}" >&2
+        continue
     fi
     acc=$(printf '%s' "$parsed" | cut -f1)
     name=$(printf '%s' "$parsed" | cut -f2)
-    [ -n "$acc" ] || { echo "WARN: no NCBI assembly for taxid $taxid (check for a merged/retired taxid)" >&2; continue; }
     if [ -f "$DEST/${taxid}_${acc}.fna" ]; then
         echo "skip taxid $taxid ($acc already present)"
         continue
     fi
     tmp=$(mktemp -d)
     echo ">> taxid $taxid -> $acc ($name)"
-    if ! curl -fsS -o "$tmp/g.zip" "$API/genome/accession/$acc/download?include_annotation_type=GENOME_FASTA$KEY"; then
+    if ! datasets download genome accession "$acc" --include genome \\
+        --filename "$tmp/g.zip" $APIKEY >/dev/null; then
         echo "WARN: download failed for $acc (taxid $taxid)" >&2
         rm -rf "$tmp"
         continue

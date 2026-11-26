@@ -8,8 +8,7 @@
 
 ### Fixed
 
-- `db fetch refs` 脚本解析修正：NCBI `datasets summary` 的 accession 是顶层字段 `accession`（不是 `accessions.assembly`），修复后逐 taxid 正确下载；解析改一次 summary 提取 accession+物种名，`--reference` 优先参考/代表基因组。
-- `db fetch refs` 改用 **NCBI Datasets HTTP API**（curl + python3，zip 用 `python3 -m zipfile` 解压），不再依赖 `datasets` CLI 安装与版本差异；API 在本机对用户失败清单的全部 taxid 验证可用（含无 reference 时回退任意 assembly），无效/合并 taxid 的 WARN 带提示；新增 fake-curl 端到端测试。
+- `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary` 取参考/代表基因组 → `datasets download genome accession`），兼容新旧 CLI 方言（`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持差异），解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。三种方言（现代/旧版/失败）均有 fake-CLI 端到端测试。
 
 ### Changed
 
