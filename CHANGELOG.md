@@ -13,7 +13,7 @@
 
 ### Fixed
 
-- `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary` 取参考/代表基因组 → `datasets download genome accession`），兼容新旧 CLI 方言：`taxid`/`taxon` 子命令、`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持差异，解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。四种方言（现代/旧标志/旧子命令/失败）均有 fake-CLI 端到端测试。
+- `db fetch refs` 最终实现：使用 **NCBI Datasets CLI**（`datasets summary genome taxon <数字taxid>` 取参考/代表基因组 → `datasets download genome accession`）。注意 v16+ CLI **没有 `taxid` 子命令**，数字 taxid 走 `taxon`。兼容输出/标志差异（`--as-json-lines` 与 pretty JSON 文档、`--reference` 支持情况），解析同时识别 JSONL 与 `{"reports":[…]}` 结构；失败时打印 CLI 自身错误（不再静默吞错），支持 `NCBI_API_KEY`。fake-CLI 端到端测试严格模拟 v18 行为（误用 taxid 会失败）。
 
 ### Changed
 

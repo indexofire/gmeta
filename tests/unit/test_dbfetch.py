@@ -57,8 +57,9 @@ def test_refs_script_content(tmp_path: Path) -> None:
     written = write_fetch_scripts(["refs"], tmp_path, "/data/db", refs_taxids=["562", "662"])
     body = (tmp_path / "fetch-refs.sh").read_text()
     assert written[0].name == "fetch-refs.sh"
-    # official CLI path; both JSON-lines and pretty-JSON dialects tolerated
-    assert "datasets summary genome taxid" in body
+    # v16+ CLI: numeric taxids go through the `taxon` subcommand
+    assert "datasets summary genome taxon" in body
+    assert "summary genome taxid" not in body  # no such subcommand in v2 CLI
     assert "datasets download genome accession" in body
     assert "ncbi-datasets-cli" in body
     assert "--as-json-lines" in body
@@ -68,7 +69,6 @@ def test_refs_script_content(tmp_path: Path) -> None:
     assert "manifest.csv" in body
     assert "--ref-dir" in body
     assert "NCBI_API_KEY" in body  # optional rate-limit key
-    assert "api.ncbi.nlm.nih.gov" not in body  # CLI, not the raw HTTP API
 
 
 def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
@@ -87,15 +87,15 @@ def test_generated_scripts_are_valid_bash(tmp_path: Path) -> None:
 
 
 def _fake_datasets(bin_dir) -> None:
-    """A fake CLI covering dialects; LEGACY (JSON/flags) and OLD_SUB switches."""
+    """Fake CLI matching v16+: summary genome accepts only taxon/accession."""
 
     fake = bin_dir / "datasets"
     fake.write_text(
         "#!/usr/bin/env bash\n"
         'if [ "$1" = "summary" ]; then\n'
         '  if [ -n "${FAIL:-}" ]; then echo "error: taxon not found" >&2; exit 1; fi\n'
-        '  if [ -n "${OLD_SUB:-}" ] && [ "$3" = "taxid" ]; then\n'
-        '    echo "Error: unknown command \\"taxid\\" for \\"datasets summary genome\\"" >&2\n'
+        '  if [ "$3" != "taxon" ]; then\n'
+        '    echo "Error: unknown command \\"$3\\" for \\"datasets summary genome\\"" >&2\n'
         "    exit 1\n"
         "  fi\n"
         '  for a in "$@"; do\n'
@@ -156,20 +156,12 @@ def test_refs_script_end_to_end(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_refs_script_legacy_cli_dialect(tmp_path: Path, monkeypatch) -> None:
-    """Older CLI: rejects --as-json-lines and prints a pretty JSON document."""
+    """Older flag dialect: rejects --as-json-lines, prints a pretty JSON doc."""
     result = _run_refs_script(tmp_path, monkeypatch, LEGACY="1")
     assert result.returncode == 0, result.stderr
     assert "WARN" not in result.stderr
     assert (tmp_path / "db" / "refs" / "562_GCF_000005845.2.fna").is_file()
     assert "GCF_000005845.2,562,562," in (tmp_path / "db" / "refs" / "manifest.csv").read_text()
-
-
-def test_refs_script_old_subcommand_taxon(tmp_path: Path, monkeypatch) -> None:
-    """Very old CLI: no `taxid` subcommand — fall back to `taxon <id>`."""
-    result = _run_refs_script(tmp_path, monkeypatch, OLD_SUB="1", LEGACY="1")
-    assert result.returncode == 0, result.stderr
-    assert "WARN" not in result.stderr
-    assert (tmp_path / "db" / "refs" / "562_GCF_000005845.2.fna").is_file()
 
 
 def test_refs_script_cli_failure_surfaces_error(tmp_path: Path, monkeypatch) -> None:
