@@ -8,6 +8,7 @@
 
 ### Added
 
+- `gmeta net build -J/--jobs`：跨样本并行（线程池，重活在 minimap2/samtools 子进程里）；输出顺序保持输入顺序，单样本失败不中断整批。`-t/--threads` 仍是单个样本内工具线程数——建议 `-J × -t ≈ CPU 核数`。批量样本的覆盖度计算不再串行。
 - `gmeta net build --sample-id`：单输入时覆盖推导的样本号。用于产物路径里没有样本号的场景（如输出目录叫 `output2` 而 reads 是 `1_R1.fq.gz`），对齐后覆盖度即可正常计算。
 
 ### Fixed

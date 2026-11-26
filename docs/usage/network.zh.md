@@ -84,6 +84,8 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 | --- | --- |
 | `--profiler` | 强制指定格式（auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph） |
 | `--sample-id` | 覆盖推导的样本号（仅单输入；当产物路径里没有样本号时用它对齐 reads） |
+| `-J/--jobs` | 并发的样本数（默认 1；覆盖度计算是瓶颈） |
+| `-t/--threads` | 每次 minimap2/samtools 调用的线程数 |
 | `--kaiju-genus` | kaiju2table 属级表，提供真实属计数 |
 | `--top` | 每样本物种行数（默认 10） |
 | `--reads-dir` + `--reads-pattern` | 覆盖度用的原始 reads；pattern 未命中时自动按样本名前缀探测（`_R1/_R2`、`_1/_2`、`.1/.2` 配对，单端亦可） |

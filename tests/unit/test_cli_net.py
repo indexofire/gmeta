@@ -91,3 +91,21 @@ def test_net_build_sample_id_rejected_for_batch(kreport_file: Path, tmp_path: Pa
     )
     assert result.exit_code != 0
     assert "single input" in result.output
+
+
+def test_net_build_jobs_preserves_order(kreport_file: Path, tmp_path: Path) -> None:
+    """--jobs processes samples concurrently but keeps the input order."""
+    a = tmp_path / "A.report"
+    b = tmp_path / "B.report"
+    a.write_text(kreport_file.read_text())
+    b.write_text(kreport_file.read_text())
+    target = tmp_path / "batch.xlsx"
+    result = CliRunner().invoke(
+        main,
+        ["net", "build", str(a), str(b), "-J", "2", "-o", str(target), "--top", "2"],
+    )
+    assert result.exit_code == 0, result.output
+    ws = load_workbook(target)["混合样本"]
+    samples = [ws.cell(row=r, column=1).value for r in range(2, ws.max_row + 1)]
+    # first row of each group carries the sample id, in input order
+    assert [s for s in samples if s] == ["A", "B"]

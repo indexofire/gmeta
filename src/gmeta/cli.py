@@ -665,6 +665,14 @@ def net_group() -> None:
     show_default=True,
     help="minimap2 read preset.",
 )
+@click.option(
+    "-J",
+    "--jobs",
+    type=click.IntRange(min=1),
+    default=1,
+    show_default=True,
+    help="Concurrent samples (coverage is the bottleneck; threads stay per-tool).",
+)
 @_threads_option("Threads for minimap2/samtools.")
 def net_build(
     profiles: tuple[str, ...],
@@ -683,6 +691,7 @@ def net_build(
     per_species: bool,
     min_depths: str,
     preset: str,
+    jobs: int,
     threads: int,
 ) -> None:
     """Build the 混合样本 submission workbook from profiler outputs.
@@ -716,8 +725,8 @@ def net_build(
     if sample_id_override and len(profiles) > 1:
         raise click.UsageError("--sample-id only applies to a single input file")
 
-    all_rows: list[NetworkRow] = []
-    for path in profiles:
+    def process_one(path: str) -> list[NetworkRow]:
+        """Profile one input and fill its coverage columns (thread-safe)."""
         sample_id = sample_id_override or _sample_id_from_profile(path)
         try:
             rows, missing, detected = profile_to_network_rows(
@@ -737,12 +746,11 @@ def net_build(
                 f"[{sample_id}] no reference genome for {len(missing)} taxid(s): "
                 f"{','.join(str(t) for t in missing[:5])}" + ("…" if len(missing) > 5 else "")
             )
-        all_rows.extend(rows)
 
         if not want_coverage:
             for row in rows:
                 row.coverage_status = "未请求（无 --reads-dir）"
-            continue
+            return rows
         reads = discover_reads(reads_dir, sample_id, reads_pattern)
         if reads is None:
             from gmeta.analysis.coverage import discover_reads_auto
@@ -766,7 +774,7 @@ def net_build(
             )
             for row in rows:
                 row.coverage_status = "缺reads"
-            continue
+            return rows
         for row in rows:
             if row.reference is None:
                 row.coverage_status = "缺参考基因组"
@@ -778,7 +786,7 @@ def net_build(
                 f"[{sample_id}] no resolvable references — coverage left blank "
                 "(provide --manifest or --ref-dir with per-species FASTAs)"
             )
-            continue
+            return rows
         _info(f"[{sample_id}] coverage: {len(entries)} reference(s), {len(reads)} read file(s)")
         runner = coverage_per_species if per_species else coverage_for_species
         try:
@@ -788,7 +796,7 @@ def net_build(
             for row in rows:
                 if row.reference is not None:
                     row.coverage_status = "覆盖度计算失败"
-            continue
+            return rows
         for row in rows:
             key = row.accession or str(row.taxid)
             stat = stats.get(key)
@@ -800,6 +808,17 @@ def net_build(
             row.mean_depth = stat.mean_depth
             row.coverage_pct_1x = stat.pct_covered.get(1)
             row.coverage_status = "已计算"
+        return rows
+
+    if jobs > 1 and len(profiles) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+
+        _info(f"batch: {len(profiles)} sample(s), jobs={jobs}, threads={threads}")
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            per_sample = list(pool.map(process_one, profiles))
+    else:
+        per_sample = [process_one(path) for path in profiles]
+    all_rows: list[NetworkRow] = [row for rows in per_sample for row in rows]
 
     if want_coverage:
         with_cov = sum(1 for row in all_rows if row.coverage_pct_1x is not None)
