@@ -202,9 +202,7 @@ def test_cli_kingdom_combination(tmp_path: Path) -> None:
         (default_target, []),
         (combined_target, ["--kingdom", "viruses+bacteria"]),
     ):
-        result = CliRunner().invoke(
-            main, ["net", "build", str(path), "-o", str(target), *extra]
-        )
+        result = CliRunner().invoke(main, ["net", "build", str(path), "-o", str(target), *extra])
         assert result.exit_code == 0, result.output
 
     def latin_names(target: Path) -> set[str]:

@@ -92,8 +92,7 @@ def parse_kingdoms(raw: str) -> frozenset[str] | None:
     unknown = [part for part in parts if part not in KINGDOM_NAMES]
     if unknown:
         raise ValueError(
-            f"unknown kingdom(s): {', '.join(unknown)}; allowed: "
-            f"{', '.join(KINGDOM_NAMES)}, all"
+            f"unknown kingdom(s): {', '.join(unknown)}; allowed: {', '.join(KINGDOM_NAMES)}, all"
         )
     return frozenset(dict.fromkeys(parts))
 
