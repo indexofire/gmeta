@@ -32,7 +32,11 @@ _SUMMARY_FLAGS: tuple[tuple[str, ...], ...] = (
 
 
 def parse_summary(text: str) -> tuple[str, str] | None:
-    """(accession, organism_name) from JSON-lines or a pretty JSON document."""
+    """(accession, organism_name) from JSON-lines or a pretty JSON document.
+
+    Handles both genome reports (``organism.organism_name``) and virus
+    reports (``virus.organism_name``).
+    """
     text = text.strip()
     if not text:
         return None
@@ -48,7 +52,9 @@ def parse_summary(text: str) -> tuple[str, str] | None:
     else:
         row = {}
     acc = row.get("accession") or (row.get("accessions") or {}).get("assembly") or ""
-    name = (row.get("organism") or {}).get("organism_name") or ""
+    organism = row.get("organism") or {}
+    virus = row.get("virus") or {}
+    name = organism.get("organism_name") or virus.get("organism_name") or ""
     if not acc:
         return None
     return acc, name.replace(",", " ")
@@ -65,40 +71,64 @@ def _cli_error(proc: subprocess.CompletedProcess[str]) -> str:
 
 def find_assembly(
     datasets_bin: str, taxid: int | str, api_key: str | None = None
-) -> tuple[str, str]:
-    """(accession, organism_name) for a taxid; raises RuntimeError with the CLI error."""
+) -> tuple[str, str, str]:
+    """(accession, organism_name, kind) for a taxid, kind in {'genome','virus'}.
+
+    Cellular organisms use ``summary genome … taxon``; viruses live behind
+    the separate ``summary virus genome … taxon`` interface. Raises
+    RuntimeError with the CLI's error when both fail.
+    """
     last_error = ""
-    for flags in _SUMMARY_FLAGS:
-        cmd = [datasets_bin, "summary", "genome", "taxon", str(taxid), *flags]
-        if api_key:
-            cmd += ["--api-key", api_key]
-        proc = _run(cmd)
-        if proc.returncode != 0:
-            last_error = _cli_error(proc)
-            continue
-        parsed = parse_summary(proc.stdout)
-        if parsed:
-            return parsed
+    for kind, noun in (("genome", "genome"), ("virus", "virus genome")):
+        for flags in _SUMMARY_FLAGS:
+            cmd = [datasets_bin, "summary"]
+            cmd += noun.split() + ["taxon", str(taxid), *flags]
+            if api_key:
+                cmd += ["--api-key", api_key]
+            proc = _run(cmd)
+            if proc.returncode != 0:
+                last_error = _cli_error(proc)
+                continue
+            parsed = parse_summary(proc.stdout)
+            if parsed:
+                return parsed[0], parsed[1], kind
     detail = f" — CLI: {last_error}" if last_error else ""
     raise RuntimeError(f"no NCBI assembly for taxid {taxid}{detail}")
 
 
 def _download_genome(
-    datasets_bin: str, accession: str, dest: Path, taxid: int | str, api_key: str | None
+    datasets_bin: str,
+    accession: str,
+    dest: Path,
+    taxid: int | str,
+    api_key: str | None,
+    kind: str = "genome",
 ) -> Path:
     with tempfile.TemporaryDirectory(prefix="gmeta-refs-") as tmp:
         zip_path = Path(tmp) / "g.zip"
-        cmd = [
-            datasets_bin,
-            "download",
-            "genome",
-            "accession",
-            accession,
-            "--include",
-            "genome",
-            "--filename",
-            str(zip_path),
-        ]
+        if kind == "virus":
+            cmd = [
+                datasets_bin,
+                "download",
+                "virus",
+                "genome",
+                "accession",
+                accession,
+                "--filename",
+                str(zip_path),
+            ]
+        else:
+            cmd = [
+                datasets_bin,
+                "download",
+                "genome",
+                "accession",
+                accession,
+                "--include",
+                "genome",
+                "--filename",
+                str(zip_path),
+            ]
         if api_key:
             cmd += ["--api-key", api_key]
         proc = _run(cmd)
@@ -109,7 +139,9 @@ def _download_genome(
             zf.extractall(extracted)
         fnas = sorted(extracted.rglob("*.fna"))
         if not fnas:
-            raise RuntimeError(f"download for {accession} contained no .fna")
+            fnas = sorted(extracted.rglob("*.fasta"))
+        if not fnas:
+            raise RuntimeError(f"download for {accession} contained no FASTA")
         target = dest / f"{taxid}_{accession}.fna"
         target.write_bytes(fnas[0].read_bytes())
         return target
@@ -154,9 +186,10 @@ def ensure_references(
             ready[taxid] = cached[0]
             continue
         try:
-            accession, name = find_assembly(datasets_bin, taxid, api_key)
-            tell(f"taxid {taxid} -> {accession} ({name or 'unnamed'})")
-            target = _download_genome(datasets_bin, accession, out_dir, taxid, api_key)
+            accession, name, kind = find_assembly(datasets_bin, taxid, api_key)
+            kind_label = "virus" if kind == "virus" else "genome"
+            tell(f"taxid {taxid} -> {accession} ({name or 'unnamed'}, {kind_label})")
+            target = _download_genome(datasets_bin, accession, out_dir, taxid, api_key, kind)
         except RuntimeError as exc:
             errors.append(str(exc))
             tell(f"WARN: {exc}")

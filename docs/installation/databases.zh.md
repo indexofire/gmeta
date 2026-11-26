@@ -67,9 +67,10 @@ bash scripts/fetch-refs.sh        # NCBI datasets：每 taxid 一个基因组
 conda install -c conda-forge ncbi-datasets-cli
 ```
 
-脚本兼容 CLI 版本间的标志/输出差异（JSON-lines / pretty JSON、`--reference`
-支持情况），taxid 失败时打印 CLI 自身的错误。数字 taxid 通过 `taxon` 传入
-（`datasets summary genome taxon 562`）——v16+ CLI 没有 `taxid` 子命令。
+脚本对病毒 taxid 会从细胞生物接口回退到**病毒接口**（`datasets summary virus
+genome taxon`、`datasets download virus genome accession`）。兼容 CLI 版本间
+的标志/输出差异（JSON-lines / pretty JSON、`--reference`），taxid 失败时打印
+CLI 自身的错误。数字 taxid 通过 `taxon` 传入——v16+ CLI 没有 `taxid` 子命令。
 批量较大时可 `export NCBI_API_KEY=…` 提高限速。也可直接指定：
 `--taxids 562,662`。
 

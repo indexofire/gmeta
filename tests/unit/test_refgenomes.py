@@ -31,11 +31,13 @@ def _fake_datasets(bin_dir: Path, count_file: Path, fail_taxid: str = "") -> Non
     fake.write_text(
         "#!/usr/bin/env bash\n"
         'if [ "$1" = "summary" ]; then\n'
-        f'  if [ "$4" = "{fail_taxid}" ] && [ -n "{fail_taxid}" ]; then\n'
-        '    echo "Error: taxon not found" >&2; exit 1\n'
+        f'  if [ "${{@: -1}}" != "" ] && [ -n "{fail_taxid}" ]; then\n'
+        f'    case " $* " in *" {fail_taxid} "*) echo "Error: taxon not found" >&2; exit 1;; esac\n'
         "  fi\n"
-        '  if [ "$3" != "taxon" ]; then\n'
-        '    echo "Error: unknown command \\"$3\\"" >&2; exit 1\n'
+        "  has_taxon=0\n"
+        '  for a in "$@"; do [ "$a" = "taxon" ] && has_taxon=1; done\n'
+        '  if [ "$has_taxon" = 0 ]; then\n'
+        '    echo "Error: unknown command" >&2; exit 1\n'
         "  fi\n"
         f"  echo '{FAKE_SUMMARY_JSONL.strip()}'\n"
         'elif [ "$1" = "download" ]; then\n'
@@ -112,3 +114,41 @@ def test_ensure_references_missing_cli_says_how_to_install(tmp_path: Path, monke
     monkeypatch.setenv("PATH", str(tmp_path / "empty"))
     with pytest.raises(RuntimeError, match="ncbi-datasets-cli"):
         ensure_references([562], tmp_path / "refs")
+
+
+def test_ensure_references_virus_fallback(tmp_path: Path, monkeypatch) -> None:
+    """Cellular-organisms summary is empty → the virus interface is used."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake = bin_dir / "datasets"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        'if [ "$1" = "summary" ]; then\n'
+        '  case " $* " in\n'
+        '    *" virus genome taxon "*)\n'
+        '      echo \'{"accession":"NC_004162.2",'
+        '"virus":{"organism_name":"Chikungunya virus"}}\'\n'
+        "      ;;\n"
+        "    *)\n"
+        "      echo '{\"reports\": []}'\n"
+        "      ;;\n"
+        "  esac\n"
+        'elif [ "$1" = "download" ]; then\n'
+        '  out=""; prev=""\n'
+        '  for a in "$@"; do [ "$prev" = "--filename" ] && out="$a"; prev="$a"; done\n'
+        '  python3 - "$out" <<PY\n'
+        "import sys, zipfile\n"
+        "with zipfile.ZipFile(sys.argv[1], 'w') as z:\n"
+        "    z.writestr('ncbi_dataset/data/NC_004162.2/x.fna', '>v\\nACGT\\n')\n"
+        "PY\n"
+        "fi\n"
+    )
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ['PATH']}")
+
+    messages: list[str] = []
+    ready, errors = ensure_references([37124], tmp_path / "refs", on_message=messages.append)
+    assert errors == []
+    assert (tmp_path / "refs" / "37124_NC_004162.2.fna").is_file()
+    assert any("virus" in msg for msg in messages)
+    assert any("Chikungunya virus" in msg for msg in messages)

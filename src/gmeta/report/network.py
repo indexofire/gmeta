@@ -65,9 +65,70 @@ _HEADER_FONT = Font(color="FFFFFF", bold=True)
 # dominate the top-N. Extend this set for animal hosts (e.g. 10090 mouse).
 HOST_TAXIDS: frozenset[int] = frozenset({9606})  # Homo sapiens
 
+# Kingdom anchor taxids in NCBI taxonomy (kreport D rows / ancestors).
+_KINGDOM_BY_TAXID: dict[int, str] = {
+    2: "bacteria",
+    2157: "archaea",
+    2759: "eukaryota",
+    10239: "viruses",
+}
+
 
 def is_host_taxon(taxid: int | None) -> bool:
     return taxid is not None and taxid in HOST_TAXIDS
+
+
+def species_kingdoms(summary: KreportSummary) -> dict[int, str]:
+    """species taxid → kingdom label from the kreport ancestor chain.
+
+    kraken2 reports carry the domain rows (Bacteria 2, Archaea 2157,
+    Eukaryota 2759, Viruses 10239); walking the indentation stack gives an
+    exact kingdom per species. Species with no recognised ancestor map to
+    ``"unknown"``.
+    """
+    stack: list[KreportRow] = []
+    kingdoms: dict[int, str] = {}
+    for row in summary.rows:
+        while stack and stack[-1].depth >= row.depth:
+            stack.pop()
+        kingdom = _KINGDOM_BY_TAXID.get(row.taxid)
+        if kingdom is None:
+            kingdom = next(
+                (
+                    _KINGDOM_BY_TAXID[a.taxid]
+                    for a in reversed(stack)
+                    if a.taxid in _KINGDOM_BY_TAXID
+                ),
+                "unknown",
+            )
+        if row.rank == "species":
+            kingdoms[row.taxid] = kingdom
+        stack.append(row)
+    return kingdoms
+
+
+_VIRUS_NAME_SUFFIXES = (" virus", " viruses", " phage", " viroid")
+
+
+def kingdom_from_name(name: str) -> str | None:
+    """Best-effort kingdom from a latin name (table-based profilers).
+
+    Only viruses are reliably recognisable by suffix; everything else is
+    unknown and treated as bacterial for the default filter.
+    """
+    lowered = name.strip().lower()
+    if lowered.endswith(_VIRUS_NAME_SUFFIXES):
+        return "viruses"
+    return None
+
+
+def _keep_kingdom(kingdom: str | None, allowed: frozenset[str] | None) -> bool:
+    if allowed is None:  # --kingdom all
+        return True
+    if kingdom in (None, "unknown"):
+        # table profilers / truncated reports: treat unknown as bacterial
+        return "bacteria" in allowed
+    return kingdom in allowed
 
 
 @dataclass
@@ -212,9 +273,19 @@ def pair_species_with_genus(
     return pairs
 
 
-def top_species(summary: KreportSummary, top: int) -> list[tuple[KreportRow, KreportRow | None]]:
-    """Top-N (species, genus) pairs by species read count, host taxa excluded."""
+def top_species(
+    summary: KreportSummary,
+    top: int,
+    kingdoms: frozenset[str] | None = frozenset({"bacteria"}),
+) -> list[tuple[KreportRow, KreportRow | None]]:
+    """Top-N (species, genus) pairs, host taxa and non-allowed kingdoms excluded.
+
+    ``kingdoms=None`` disables the kingdom filter (``--kingdom all``).
+    """
     pairs = [pair for pair in pair_species_with_genus(summary) if not is_host_taxon(pair[0].taxid)]
+    if kingdoms is not None:
+        by_taxid = species_kingdoms(summary)
+        pairs = [pair for pair in pairs if _keep_kingdom(by_taxid.get(pair[0].taxid), kingdoms)]
     pairs.sort(key=lambda p: p[0].reads_total, reverse=True)
     return pairs[:top]
 
@@ -249,6 +320,7 @@ def build_rows(
     sample_id: str,
     top: int = 10,
     references: dict[int, tuple[str, Path]] | None = None,
+    kingdoms: frozenset[str] | None = frozenset({"bacteria"}),
 ) -> list[NetworkRow]:
     """Top-N species rows from a kraken2 kreport tree, ready for coverage filling.
 
@@ -256,7 +328,7 @@ def build_rows(
     the review-sheet extras; coverage numbers are filled later.
     """
     refs = references or {}
-    pairs = top_species(summary, top)
+    pairs = top_species(summary, top, kingdoms)
 
     rows: list[NetworkRow] = []
     for species, genus in pairs:
@@ -318,6 +390,7 @@ def profile_to_network_rows(
     ref_dir: str | Path | None = None,
     profiler: str = "auto",
     kaiju_genus: str | Path | None = None,
+    kingdom: str = "bacteria",
 ) -> tuple[list[NetworkRow], list[int], str]:
     """Any supported profiler output → 识别网 rows.
 
@@ -329,11 +402,14 @@ def profile_to_network_rows(
     from gmeta.analysis.kraken2 import parse_kreport
 
     detected = profiler if profiler != "auto" else P.detect_profiler(path)
+    kingdoms = None if kingdom == "all" else frozenset({kingdom})
 
     if detected == "kraken2":
         summary = parse_kreport(path)
-        references, missing = resolve_references(top_species(summary, top), manifest, ref_dir)
-        return build_rows(summary, sample_id, top, references), missing, detected
+        references, missing = resolve_references(
+            top_species(summary, top, kingdoms), manifest, ref_dir
+        )
+        return build_rows(summary, sample_id, top, references, kingdoms), missing, detected
 
     if detected == "bracken":
         from gmeta.analysis.kraken2 import parse_bracken
@@ -375,7 +451,7 @@ def profile_to_network_rows(
 
     top_taxids = [t.taxid for t in profile.species_sorted()[:top] if t.taxid]
     references, missing = resolve_taxids(top_taxids, manifest, ref_dir)
-    return build_rows_from_profile(profile, sample_id, top, references), missing, detected
+    return build_rows_from_profile(profile, sample_id, top, references, kingdoms), missing, detected
 
 
 def build_rows_from_profile(
@@ -383,6 +459,7 @@ def build_rows_from_profile(
     sample_id: str,
     top: int = 10,
     references: dict[int, tuple[str, Path]] | None = None,
+    kingdoms: frozenset[str] | None = frozenset({"bacteria"}),
 ) -> list[NetworkRow]:
     """识别网 rows from any normalised AbundanceProfile (centrifuge/kaiju/
     metaphlan/kmcp/bracken-only).
@@ -407,7 +484,12 @@ def build_rows_from_profile(
         stats[1] += taxon.fraction
 
     rows: list[NetworkRow] = []
-    candidates = [taxon for taxon in profile.species_sorted() if not is_host_taxon(taxon.taxid)]
+    candidates = [
+        taxon
+        for taxon in profile.species_sorted()
+        if not is_host_taxon(taxon.taxid)
+        and _keep_kingdom(taxon.kingdom or kingdom_from_name(taxon.name), kingdoms)
+    ]
     for taxon in candidates[:top]:
         genus_latin = genus_latin_of[taxon.name.lower()]
         genus_row = genus_table.get(genus_latin.lower())

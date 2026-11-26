@@ -54,6 +54,7 @@ class TaxonAbundance:
     taxid: int | None = None
     reads: int | None = None
     fraction: float = 0.0  # 0..1
+    kingdom: str | None = None  # bacteria/archaea/eukaryota/viruses when known
 
 
 @dataclass
@@ -175,6 +176,12 @@ def parse_kaiju_table(path: str | Path) -> AbundanceProfile:
     rows: list[TaxonAbundance] = []
     fracs: list[float | None] = []
     genus_seen: list[str | None] = []
+    kingdom_by_segment = {
+        "bacteria": "bacteria",
+        "archaea": "archaea",
+        "eukaryota": "eukaryota",
+        "viruses": "viruses",
+    }
     for cols in _read_lines(path):
         if len(cols) < 5 or cols[0] in ("file",) or cols[0].startswith("#"):
             continue
@@ -182,7 +189,12 @@ def parse_kaiju_table(path: str | Path) -> AbundanceProfile:
         segments = [seg.strip() for seg in taxon_name.split(";")]
         name = segments[-1]
         genus_seen.append(segments[-2] if len(segments) >= 2 else None)
-        rows.append(TaxonAbundance(name=name, taxid=_to_int(taxon_id), reads=_to_int(reads)))
+        kingdom = kingdom_by_segment.get(segments[0].lower()) if segments else None
+        rows.append(
+            TaxonAbundance(
+                name=name, taxid=_to_int(taxon_id), reads=_to_int(reads), kingdom=kingdom
+            )
+        )
         fracs.append(_to_float(cols[1]))
     return AbundanceProfile(
         method=KAIJU,

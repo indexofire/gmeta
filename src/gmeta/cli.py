@@ -571,6 +571,13 @@ def net_group() -> None:
 @net_group.command("build", context_settings=HELP_SETTINGS)
 @click.argument("profiles", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option(
+    "--kingdom",
+    type=click.Choice(["bacteria", "archaea", "eukaryota", "viruses", "all"]),
+    default="bacteria",
+    show_default=True,
+    help="Taxonomic kingdom to report (CPIN reports bacteria only; all = no filter).",
+)
+@click.option(
     "--sample-id",
     "sample_id_override",
     default=None,
@@ -685,6 +692,7 @@ def net_group() -> None:
 @_threads_option("Threads for minimap2/samtools.")
 def net_build(
     profiles: tuple[str, ...],
+    kingdom: str,
     sample_id_override: str | None,
     profiler: str,
     kaiju_genus: str | None,
@@ -757,6 +765,7 @@ def net_build(
                     ref_dir=ref_dir,
                     profiler=profiler,
                     kaiju_genus=kaiju_genus,
+                    kingdom=kingdom,
                 )
             except ValueError as exc:
                 raise click.ClickException(str(exc)) from exc
@@ -794,6 +803,7 @@ def net_build(
                 ref_dir=ref_dir,
                 profiler=profiler,
                 kaiju_genus=kaiju_genus,
+                kingdom=kingdom,
             )
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc

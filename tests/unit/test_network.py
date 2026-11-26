@@ -15,6 +15,7 @@ from gmeta.report.network import (
     chinese_species_name,
     format_percent,
     pair_species_with_genus,
+    species_kingdoms,
     split_by_sample,
     top_species,
     write_network_xlsx,
@@ -45,6 +46,40 @@ def test_top_species_excludes_host_taxa(kreport_file: Path) -> None:
     pairs = top_species(parse_kreport(kreport_file), 10)
     assert all(sp.taxid != 9606 for sp, _ in pairs)
     assert all(sp.name != "Homo sapiens" for sp, _ in pairs)
+
+
+VIRAL_KREPORT = """100.00\t0\t100000\tR\t1\troot
+ 40.00\t40000\t40000\tD\t10239\t  Viruses
+  5.00\t5000\t5000\tS\t11320\t    Influenza A virus
+ 55.00\t55000\t1000\tD\t2\t  Bacteria
+ 25.00\t25000\t25000\tS\t662\t    Vibrio cholerae
+  8.00\t8000\t8000\tS\t562\t    Escherichia coli
+ 40.00\t40000\t40000\tU\t0\tunclassified
+"""
+
+
+def test_kingdom_filter_excludes_viruses_by_default(tmp_path: Path) -> None:
+    path = tmp_path / "viral.report"
+    path.write_text(VIRAL_KREPORT)
+    summary = parse_kreport(path)
+
+    bacterial = build_rows(summary, "S1", top=10)
+    assert "Influenza A virus" not in [row.species_latin for row in bacterial]
+    assert [row.species_latin for row in bacterial] == ["Vibrio cholerae", "Escherichia coli"]
+
+    with_viruses = build_rows(summary, "S1", top=10, kingdoms=frozenset({"bacteria", "viruses"}))
+    assert "Influenza A virus" in [row.species_latin for row in with_viruses]
+
+    everything = build_rows(summary, "S1", top=10, kingdoms=None)
+    assert "Influenza A virus" in [row.species_latin for row in everything]
+
+
+def test_species_kingdoms_tree(tmp_path: Path) -> None:
+    path = tmp_path / "viral.report"
+    path.write_text(VIRAL_KREPORT)
+    kingdoms = species_kingdoms(parse_kreport(path))
+    assert kingdoms[11320] == "viruses"
+    assert kingdoms[662] == "bacteria"
 
 
 def test_chinese_species_name_lookup() -> None:

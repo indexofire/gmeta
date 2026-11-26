@@ -7,12 +7,14 @@ from pathlib import Path
 import pytest
 
 KREPORT = """100.00	100000	0	R	1	root
- 40.00	40000	40000	S	9606	  Homo sapiens
-  8.00	8000	8000	S	562	  Escherichia coli
- 30.00	29500	500	G	641	  Vibrio
- 25.00	25000	25000	S	662	    Vibrio cholerae
-  2.00	2000	2000	S1	1783561	      Vibrio cholerae O1
-  1.50	1500	1500	S	670	    Vibrio parahaemolyticus
+ 40.00	40000	40000	D	2759	  Eukaryota
+ 40.00	40000	40000	S	9606	    Homo sapiens
+ 60.00	60000	1000	D	2	  Bacteria
+  8.00	8000	8000	S	562	    Escherichia coli
+ 30.00	29500	500	G	641	    Vibrio
+ 25.00	25000	25000	S	662	      Vibrio cholerae
+  2.00	2000	2000	S1	1783561	        Vibrio cholerae O1
+  1.50	1500	1500	S	670	      Vibrio parahaemolyticus
  40.00	40000	40000	U	0	unclassified
 """
 

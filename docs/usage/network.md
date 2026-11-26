@@ -81,6 +81,15 @@ Notes:
 | metaphlan | `g__` rows | relative_abundance |
 | kmcp | species aggregation (per-reference format) | percentage (aggregated) |
 
+**Kingdom filtering** — 识别网 is a 致病菌 (bacterial) network, so only
+bacteria are reported by default. The kraken2 kreport path classifies each
+species exactly from its ancestor chain (Bacteria 2 / Archaea 2157 /
+Eukaryota 2759 / Viruses 10239). Table-based profilers have no taxonomy:
+kaiju carries the lineage, other formats fall back to a name heuristic
+(names ending in `virus`/`phage`/`viroid` are viruses); unknown rows are
+treated as bacterial. Use `--kingdom viruses` or `--kingdom all` when a
+sample genuinely needs viral/eukaryotic reporting.
+
 **Host taxa are filtered out** before ranking: `Homo sapiens` (TaxID 9606)
 never appears in the submission table even when host reads dominate the
 sample. Extend `HOST_TAXIDS` in `src/gmeta/report/network.py` for animal
@@ -123,6 +132,7 @@ rows themselves are still emitted.
 
 | Flag | Meaning |
 | --- | --- |
+| `--kingdom` | taxonomic kingdom to report: `bacteria` (default — 识别网 is a bacterial surveillance network), `archaea`, `eukaryota`, `viruses`, or `all` |
 | `--profiler` | force the format (auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph) |
 | `--sample-id` | override the derived sample id (single input; fixes reads matching when the artifact path lacks the id) |
 | `-J/--jobs` | concurrent samples (default 1; coverage is the bottleneck) |

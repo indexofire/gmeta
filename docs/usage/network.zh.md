@@ -75,6 +75,12 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 | metaphlan | `g__` 行 | relative_abundance |
 | kmcp | 种读数聚合（按参考行格式） | percentage（聚合后） |
 
+**分类界过滤**——识别网是致病菌（细菌）监测网，默认只报告细菌。kraken2
+kreport 路径通过祖先链精确判定（Bacteria 2 / Archaea 2157 / Eukaryota 2759 /
+Viruses 10239）。表格式软件没有分类树：kaiju 带谱系可用；其余按名称启发式
+（以 `virus`/`phage`/`viroid` 结尾视为病毒）；无法判定的按细菌处理。需要报告
+病毒/真核时用 `--kingdom viruses` 或 `--kingdom all`。
+
 **宿主类群在排序前被过滤**：即使宿主 reads 占绝对多数，`Homo sapiens`
 （TaxID 9606）也不会出现在上报表中。动物宿主（如 10090 小鼠）可扩展
 `src/gmeta/report/network.py` 里的 `HOST_TAXIDS`。
@@ -110,6 +116,7 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 
 | 参数 | 含义 |
 | --- | --- |
+| `--kingdom` | 报告的分类界：`bacteria`（默认——识别网是致病菌监测网）、`archaea`、`eukaryota`、`viruses`、`all` |
 | `--profiler` | 强制指定格式（auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph） |
 | `--sample-id` | 覆盖推导的样本号（仅单输入；当产物路径里没有样本号时用它对齐 reads） |
 | `-J/--jobs` | 并发的样本数（默认 1；覆盖度计算是瓶颈） |

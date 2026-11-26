@@ -72,12 +72,14 @@ upstream):
 conda install -c conda-forge ncbi-datasets-cli
 ```
 
-The script tolerates flag/format differences across CLI versions
-(JSON-lines vs pretty JSON, `--reference` support) and prints the CLI's own
-error when a taxid fails. Numeric taxids are passed via `taxon`
-(`datasets summary genome taxon 562`) — the v16+ CLI has no `taxid`
-subcommand. `export NCBI_API_KEY=…` raises the API rate limit for large
-batches. You can also pass explicit taxids: `--taxids 562,662`.
+The script falls back from the cellular-organisms interface to the **virus**
+interface for viral taxids (`datasets summary virus genome taxon`,
+`datasets download virus genome accession`). Flag/format differences across
+CLI versions are tolerated (JSON-lines vs pretty JSON, `--reference`) and the
+CLI's own error is printed when a taxid fails. Numeric taxids are passed via
+`taxon` — the v16+ CLI has no `taxid` subcommand. `export NCBI_API_KEY=…`
+raises the API rate limit for large batches. You can also pass explicit
+taxids: `--taxids 562,662`.
 
 URLs move with releases; every URL sits in a variable at the top of its
 script with upstream links in comments.
