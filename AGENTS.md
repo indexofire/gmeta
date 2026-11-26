@@ -25,3 +25,9 @@ CHANGELOG 的新条目留在 `[Unreleased]` 段落，等发布指令时再固化
 ./.pixi/envs/dev/bin/ruff check src/ tests/ && ./.pixi/envs/dev/bin/ruff format --check src/ tests/
 ./.pixi/envs/dev/bin/mkdocs build --strict
 ```
+
+## pixi 版本约定
+
+- 使用 **pixi ≥ 0.68**（v7 lock 格式；v6 会把源码 hash 写进 lock，导致源码改动频繁重写 lock）。
+- 仓库的 `pixi.lock` 是 **version 7** 且必须提交；只有真实依赖变更（`pixi add/remove`）时才产生新的 lock diff。
+- 若本机 pixi 较老把 lock 改回 v6：`pixi self-update` 后 `git checkout -- pixi.lock`，不要提交降级格式。
