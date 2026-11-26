@@ -165,3 +165,51 @@ def test_split_by_sample(kreport_file: Path, tmp_path: Path) -> None:
     assert ws.max_row == 3  # header + 2 rows
     assert ws.cell(row=2, column=1).value == "S1"
     assert ws.cell(row=3, column=1).value == "S1"  # single-sample file: always filled
+
+
+def test_parse_kingdoms_variants() -> None:
+    from gmeta.report.network import parse_kingdoms
+
+    assert parse_kingdoms("bacteria") == frozenset({"bacteria"})
+    assert parse_kingdoms("viruses+bacteria") == frozenset({"bacteria", "viruses"})
+    assert parse_kingdoms(" viruses + bacteria ") == frozenset({"bacteria", "viruses"})
+    assert parse_kingdoms("viruses+bacteria+viruses") == frozenset({"bacteria", "viruses"})
+    assert parse_kingdoms("all") is None
+
+    import pytest
+
+    with pytest.raises(ValueError, match="cannot be combined"):
+        parse_kingdoms("all+bacteria")
+    with pytest.raises(ValueError, match="unknown kingdom"):
+        parse_kingdoms("fungi")
+    with pytest.raises(ValueError, match="empty"):
+        parse_kingdoms("  ")
+
+
+def test_cli_kingdom_combination(tmp_path: Path) -> None:
+    """--kingdom viruses+bacteria keeps both; default keeps bacteria only."""
+    from click.testing import CliRunner
+    from openpyxl import load_workbook
+
+    from gmeta.cli import main
+
+    path = tmp_path / "viral.report"
+    path.write_text(VIRAL_KREPORT)
+
+    default_target = tmp_path / "default.xlsx"
+    combined_target = tmp_path / "combined.xlsx"
+    for target, extra in (
+        (default_target, []),
+        (combined_target, ["--kingdom", "viruses+bacteria"]),
+    ):
+        result = CliRunner().invoke(
+            main, ["net", "build", str(path), "-o", str(target), *extra]
+        )
+        assert result.exit_code == 0, result.output
+
+    def latin_names(target: Path) -> set[str]:
+        ws = load_workbook(target)["审核明细"]
+        return {ws.cell(row=r, column=4).value for r in range(2, ws.max_row + 1)}
+
+    assert "Influenza A virus" not in latin_names(default_target)
+    assert "Influenza A virus" in latin_names(combined_target)

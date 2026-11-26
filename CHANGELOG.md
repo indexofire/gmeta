@@ -8,7 +8,7 @@
 
 ### Added
 
-- `gmeta net build --kingdom`：分类界过滤，默认 `bacteria`（识别网为致病菌监测网），可选 `archaea`/`eukaryota`/`viruses`/`all`。kraken2 kreport 路径按祖先链精确判定（Bacteria 2 / Archaea 2157 / Eukaryota 2759 / Viruses 10239）；kaiju 用谱系；其余表格式软件按名称启发式（`virus`/`phage`/`viroid` 结尾），未知按细菌处理。病毒结果不再出现在默认上报表中。
+- `gmeta net build --kingdom`：分类界过滤，默认 `bacteria`（识别网为致病菌监测网），支持 `+` 组合（如 `--kingdom viruses+bacteria`）与 `all`（关闭过滤）；重复项去重、空白容忍，`all` 不允许与其他组合。kraken2 kreport 路径按祖先链精确判定（Bacteria 2 / Archaea 2157 / Eukaryota 2759 / Viruses 10239）；kaiju 用谱系；其余表格式软件按名称启发式（`virus`/`phage`/`viroid` 结尾），未知按细菌处理。病毒结果不再出现在默认上报表中。
 - `db fetch refs` / `--auto-refs` 支持病毒参考基因组：细胞生物接口无结果时自动回退到 NCBI 病毒接口（`summary virus genome taxon` + `download virus genome accession`），解析兼容 `organism.organism_name` 与 `virus.organism_name` 两种报告结构。
 - `gmeta net build --auto-refs`：一条命令完成"判断缺参考 → 自动下载 → 计算覆盖度"。先统一扫描所有输入样本的缺失 taxid（多个样本只下载一次，避免并发竞态），用 NCBI Datasets CLI 下载到 refs 目录（`<taxid>_<accession>.fna` + `manifest.csv`，已存在的复用），然后照常并行计算覆盖度。无网络时可继续用手动闭环（`--missing-refs-out` → `db fetch refs`）。解析器支持 manifest 条目文件缺失时回退到 refs 目录的 `<taxid>_*.fna`。`ncbi-datasets-cli` 加入 pixi 依赖。
 - `gmeta net build -J/--jobs`：跨样本并行（线程池，重活在 minimap2/samtools 子进程里）；输出顺序保持输入顺序，单样本失败不中断整批。`-t/--threads` 仍是单个样本内工具线程数——建议 `-J × -t ≈ CPU 核数`。批量样本的覆盖度计算不再串行。

@@ -572,10 +572,13 @@ def net_group() -> None:
 @click.argument("profiles", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option(
     "--kingdom",
-    type=click.Choice(["bacteria", "archaea", "eukaryota", "viruses", "all"]),
     default="bacteria",
     show_default=True,
-    help="Taxonomic kingdom to report (CPIN reports bacteria only; all = no filter).",
+    metavar="KINGDOM[+KINGDOM...]",
+    help=(
+        "Taxonomic kingdom(s) to report, '+'-joined (e.g. viruses+bacteria). "
+        "Default bacteria — CPIN reports bacteria only; all = no filter."
+    ),
 )
 @click.option(
     "--sample-id",
@@ -744,6 +747,12 @@ def net_build(
         raise click.UsageError("--sample-id only applies to a single input file")
     if auto_refs and not want_coverage:
         raise click.UsageError("--auto-refs requires --reads-dir (it fetches coverage references)")
+    from gmeta.report.network import parse_kingdoms
+
+    try:
+        parse_kingdoms(kingdom)  # validate early → UsageError, not a runtime surprise
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
 
     if auto_refs:
         # pre-pass over every sample: fetch missing references once, before

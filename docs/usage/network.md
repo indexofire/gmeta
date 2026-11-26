@@ -87,8 +87,8 @@ species exactly from its ancestor chain (Bacteria 2 / Archaea 2157 /
 Eukaryota 2759 / Viruses 10239). Table-based profilers have no taxonomy:
 kaiju carries the lineage, other formats fall back to a name heuristic
 (names ending in `virus`/`phage`/`viroid` are viruses); unknown rows are
-treated as bacterial. Use `--kingdom viruses` or `--kingdom all` when a
-sample genuinely needs viral/eukaryotic reporting.
+treated as bacterial. Combine kingdoms with `+` (`--kingdom viruses+bacteria`)
+or use `--kingdom all` to disable the filter entirely.
 
 **Host taxa are filtered out** before ranking: `Homo sapiens` (TaxID 9606)
 never appears in the submission table even when host reads dominate the
@@ -132,7 +132,7 @@ rows themselves are still emitted.
 
 | Flag | Meaning |
 | --- | --- |
-| `--kingdom` | taxonomic kingdom to report: `bacteria` (default — 识别网 is a bacterial surveillance network), `archaea`, `eukaryota`, `viruses`, or `all` |
+| `--kingdom` | taxonomic kingdom(s) to report, `+`-joined: `bacteria` (default — 识别网 is a bacterial surveillance network), `archaea`, `eukaryota`, `viruses`, or `all`; e.g. `--kingdom viruses+bacteria` |
 | `--profiler` | force the format (auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph) |
 | `--sample-id` | override the derived sample id (single input; fixes reads matching when the artifact path lacks the id) |
 | `-J/--jobs` | concurrent samples (default 1; coverage is the bottleneck) |

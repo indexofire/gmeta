@@ -73,6 +73,30 @@ _KINGDOM_BY_TAXID: dict[int, str] = {
     10239: "viruses",
 }
 
+KINGDOM_NAMES: tuple[str, ...] = ("bacteria", "archaea", "eukaryota", "viruses")
+
+
+def parse_kingdoms(raw: str) -> frozenset[str] | None:
+    """``viruses+bacteria`` → frozenset; ``all`` → None (no filter).
+
+    Order kept, duplicates dropped, whitespace tolerated. Raises ValueError
+    for empty input, unknown names, or ``all`` combined with others.
+    """
+    parts = [part.strip().lower() for part in raw.split("+") if part.strip()]
+    if not parts:
+        raise ValueError("--kingdom is empty")
+    if "all" in parts:
+        if len(parts) > 1:
+            raise ValueError("'all' cannot be combined with other kingdoms")
+        return None
+    unknown = [part for part in parts if part not in KINGDOM_NAMES]
+    if unknown:
+        raise ValueError(
+            f"unknown kingdom(s): {', '.join(unknown)}; allowed: "
+            f"{', '.join(KINGDOM_NAMES)}, all"
+        )
+    return frozenset(dict.fromkeys(parts))
+
 
 def is_host_taxon(taxid: int | None) -> bool:
     return taxid is not None and taxid in HOST_TAXIDS
@@ -402,7 +426,7 @@ def profile_to_network_rows(
     from gmeta.analysis.kraken2 import parse_kreport
 
     detected = profiler if profiler != "auto" else P.detect_profiler(path)
-    kingdoms = None if kingdom == "all" else frozenset({kingdom})
+    kingdoms = parse_kingdoms(kingdom)
 
     if detected == "kraken2":
         summary = parse_kreport(path)
