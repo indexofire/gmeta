@@ -77,10 +77,17 @@ per row.
 ## db
 
 ```bash
-gmeta db list                    # database locations + state
-gmeta db fetch [TARGETS]...      # generate download scripts (not executed)
+gmeta db list                              # every database: path, ready, missing file
+gmeta db list -f json                      # stable machine contract
+gmeta db fetch [TARGETS]...                # generate download scripts (not executed)
+gmeta db fetch refs --missing-refs missing.tsv -O scripts/   # coverage references
+gmeta db fetch refs --taxids 562,662,1304 -O scripts/
 ```
 
-Fetch targets: `kraken2 centrifuge kaiju metaphlan kmcp sylph taxdump host`,
-or `all`. Options: `-O/--out-dir` (default `db-fetch`), `--db-root`
-(install root baked into the scripts). See [Databases](../installation/databases.md).
+Fetch targets: `kraken2 centrifuge kaiju metaphlan kmcp sylph taxdump host refs`,
+or `all` (refs excluded unless `--taxids/--missing-refs` is given). Options:
+`-O/--out-dir` (default `db-fetch`), `--db-root` (install root baked into the
+scripts; defaults to `GMETA_DB_DIR` or `~/.local/share/gmeta/db`). The `refs`
+target generates an NCBI Datasets CLI script that installs
+`refs/<taxid>_<accession>.fna` + `refs/manifest.csv`.
+See [Databases](../installation/databases.md).

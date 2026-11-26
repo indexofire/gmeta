@@ -6,10 +6,10 @@
 
 ## 功能
 
-- **mNGS 全流程** `gmeta run`：fastp 质控 → bowtie2 去宿主 → 物种丰度分析，支持 **6 种分析软件**：kraken2+bracken、sylph、centrifuge、kaiju、MetaPhlAn、KMCP
+- **mNGS 全流程** `gmeta run`：fastp 质控 → bowtie2 去宿主 → 物种丰度分析，支持 **6 种分析软件**：kraken2+bracken、sylph、centrifuge、kaiju、MetaPhlAn、KMCP；批量样本用 `-S` 清单 / mate 自动配对 / `-J` 并行
 - **结果解析出报告** `gmeta report`：直接导入已有分析结果（同样 6 种软件的 8 种格式），无需重跑
-- **识别网上报** `gmeta net build`：分析结果 → 国家致病菌识别网"混合样本"模板格式（属/种中文名、序列数、相对丰度、种基因组覆盖度），支持批量样本、按样本拆分、覆盖度自动计算、**格式自动嗅探**
-- **数据库管理** `gmeta db fetch`：生成各数据库的可续传下载脚本（不代跑，URL 可审查），`gmeta db list` 检查数据库状态
+- **识别网上报** `gmeta net build`：分析结果 → 国家致病菌识别网"混合样本"模板格式（属/种中文名、序列数、相对丰度、种基因组覆盖度），支持批量样本与 `-J` 跨样本并行、按样本拆分、格式自动嗅探、`--sample-id` 对齐、**逐行覆盖度状态**与 `--missing-refs-out` 缺失参考清单
+- **数据库管理** `gmeta db`：`list` 探活全部目标（含缺失文件原因），`fetch` 生成可续传下载脚本（kraken2/centrifuge/kaiju/metaphlan/kmcp/sylph/taxdump/host），`fetch refs` 按缺失清单生成 NCBI 参考基因组下载脚本；数据库默认在 `~/.local/share/gmeta/db`（代码目录之外）
 - **报告输出**：JSON（结构化）、HTML（网页）、Excel（上报数据交换）、PDF（正式文档），同一数据模型四种渲染
 - **重点病原标注**：内置监测重点病原列表（甲类/乙类传染病、监测重点、突发疫情防控、呼吸道病原），检出自动标注中文名与类别
 - **MAGs 分析**（规划中）：bin 质量评估、物种归属、基因组汇总

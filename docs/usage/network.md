@@ -78,6 +78,32 @@ never appears in the submission table even when host reads dominate the
 sample. Extend `HOST_TAXIDS` in `src/gmeta/report/network.py` for animal
 hosts (e.g. 10090 mouse).
 
+### Reading 种基因组覆盖度
+
+Coverage breadth is a **saturating** metric, not a linear abundance proxy:
+with tens of millions of reads, a species at a few percent abundance
+already reaches tens of × mean depth, so 90–100% at the 1× threshold is
+normal for mid/high-abundance taxa in deep mNGS. Judge results together
+with the 审核明细 columns:
+
+| Observation | Reading |
+| --- | --- |
+| 90%+ coverage with mean depth ≫1× | expected — depth saturates breadth |
+| 90%+ coverage with mean depth <1× | investigate reference/genome size |
+| ~90%+ even for 0.1% abundance | possible cross-mapping among close relatives; re-check with `--per-species` |
+| Same magnitude as the legacy workflow | normal |
+
+For more discrimination, record stricter thresholds with
+`--min-depths 5,10,50` — 5×/10× breadth separates taxa better than 1×.
+
+### Performance
+
+`-J/--jobs` runs samples concurrently (the cost is coverage: minimap2 +
+samtools per sample); `-t/--threads` stays per tool invocation. Aim for
+`-J × -t ≈ CPU cores`. Each concurrent sample also holds a temporary BAM
+roughly the size of its combined reference set, so keep `-J` moderate on
+small disks.
+
 When a profiler has no genus rows (kmcp, kaiju without the genus table),
 genus counts are aggregated from that genus' species rows — the honest
 estimate the format allows.

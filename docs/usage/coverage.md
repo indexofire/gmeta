@@ -39,6 +39,21 @@ estimates, ~N× slower.
   `缺参考基因组` / `缺reads` / `未请求（无 --reads-dir）` / `覆盖度计算失败`),
   so an empty coverage cell always has a visible reason. `--missing-refs-out`
   exports the species lacking references for follow-up downloads.
+
+## Reading the values
+
+Breadth at 1× is **saturating**: a species at a few percent of a deep mNGS
+run already has tens of × mean depth, so 90–100% coverage is expected for
+mid/high-abundance taxa — it is not a linear abundance measure. Use the
+审核明细 columns together:
+
+- `平均测序深度` — high depth explains high breadth; breadth ≫90% with mean
+  depth <1× is worth investigating.
+- `覆盖度1x(%)` — the submission value.
+- `--min-depths 5,10,50` records stricter thresholds in the details TSV;
+  5×/10× breadth discriminates taxa better than 1×.
+- `--per-species` re-checks suspicious cases where cross-mapping among close
+  relatives may inflate breadth.
 - **Read length matters**: minimap2 `-x sr` needs ≥50 bp reads; ONT/PacBio
   data must pass `--preset map-ont` / `--preset map-pb`.
 - **Reference resolution order**: manifest by `species_taxid` →

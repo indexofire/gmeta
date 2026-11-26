@@ -44,6 +44,7 @@ pixi run gmeta report -s SAMPLE-001 \
 pixi run gmeta net build kraken/*.report \
   --reads-dir raw_reads \
   --manifest ref_genome_manifest.csv \
+  -J 4 -t 4 \
   -o 识别网上报.xlsx --split-dir result/
 ```
 

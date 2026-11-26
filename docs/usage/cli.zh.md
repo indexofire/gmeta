@@ -74,10 +74,16 @@ gmeta report -s SAMPLE-001 --metaphlan profile.txt -o SAMPLE-1.report.html
 ## db
 
 ```bash
-gmeta db list                    # 数据库位置与状态
-gmeta db fetch [TARGETS]...      # 生成下载脚本（不执行）
+gmeta db list                              # 全部数据库：路径、就绪状态、缺什么文件
+gmeta db list -f json                      # 稳定的机器契约
+gmeta db fetch [TARGETS]...                # 生成下载脚本（不执行）
+gmeta db fetch refs --missing-refs missing.tsv -O scripts/   # 覆盖度参考基因组
+gmeta db fetch refs --taxids 562,662,1304 -O scripts/
 ```
 
-fetch 目标：`kraken2 centrifuge kaiju metaphlan kmcp sylph taxdump host` 或
-`all`。选项：`-O/--out-dir`（默认 `db-fetch`）、`--db-root`（写进脚本的安装根目录）。
+fetch 目标：`kraken2 centrifuge kaiju metaphlan kmcp sylph taxdump host refs`，
+或 `all`（未给 `--taxids/--missing-refs` 时不含 refs）。选项：
+`-O/--out-dir`（默认 `db-fetch`）、`--db-root`（写进脚本的安装根目录；默认
+`GMETA_DB_DIR` 或 `~/.local/share/gmeta/db`）。`refs` 目标生成 NCBI Datasets
+CLI 下载脚本，按 `refs/<taxid>_<accession>.fna` 安装并生成 `refs/manifest.csv`。
 见[数据库](../installation/databases.zh.md)。
