@@ -33,27 +33,35 @@ gmeta net build kraken/*.report \
   -o 识别网上报.xlsx --split-dir result/ --details coverage_details.tsv
 ```
 
-### From `gmeta run` to the workbook
+### From `gmeta run` to the workbook — one command
 
 `gmeta run` keeps its profiler artifacts under `<outdir>/<sample>/pipeline/`
 (`kreport.txt`, `bracken.txt`, `fastp.json`, …). `net build` recognises that
 layout: the sample id comes from the directory, so the run output feeds the
 workbook directly and reads are found by the sample id.
 
+With `--auto-refs` the whole reference workflow collapses into the same
+command: missing species references are downloaded via the NCBI Datasets CLI
+before coverage runs (references already on disk are reused).
+
 ```bash
 # 1) profile one sample (kraken2 + bracken)
 gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
   -D /data/db/kraken2 -O gmeta-out/1 -t 8
 
-# 2) surveillance workbook from the run's kreport (sample id inferred as "1")
+# 2) workbook + coverage in one go (fetches missing refs automatically)
 gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . \
-  --manifest ref_genome_manifest.csv --ref-dir ref_genomes \
-  -o 1.xlsx --details coverage_details.tsv --missing-refs-out missing_refs.tsv -t 8
+  --reads-dir . --auto-refs \
+  --ref-dir "$GMETA_DB_DIR/refs" \
+  -o 1.xlsx --details coverage_details.tsv -t 8
 ```
 
 Notes:
 
+- `--auto-refs` needs the NCBI Datasets CLI (`datasets`; the gmeta pixi env
+  ships `ncbi-datasets-cli`). Without network access, fall back to the manual
+  loop: run once with `--missing-refs-out`, then
+  `gmeta db fetch refs --missing-refs …` and re-run.
 - On releases without the pipeline-layout inference, copy the artifact to a
   sample-named file first: `cp gmeta-out/1/pipeline/kreport.txt gmeta-out/1/1.kreport`
   and pass that path instead.
@@ -122,6 +130,7 @@ rows themselves are still emitted.
 | `--kaiju-genus` | kaiju2table genus table for real genus counts |
 | `--top` | species rows per sample (default 10) |
 | `--reads-dir` + `--reads-pattern` | raw reads for coverage; when the pattern misses, FASTQs starting with the sample id are auto-detected (mates paired by `_R1/_R2`, `_1/_2`, `.1/.2`, single-end ok) |
+| `--auto-refs` | download missing references via the NCBI Datasets CLI before coverage (one command; cached references are reused) |
 | `--manifest` / `--ref-dir` | reference genomes |
 | `--missing-refs-out` | TSV of species with no resolvable reference (sample, taxid, latin name, reads) |
 | `--split-dir` | one workbook per sample |

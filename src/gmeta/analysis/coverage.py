@@ -95,6 +95,11 @@ def load_manifest(path: str | Path) -> dict[int, ManifestEntry]:
     return entries
 
 
+def _taxid_candidates(ref_dir: Path, taxid: int) -> list[Path]:
+    """Files named ``<taxid>_*.fna`` (auto-refs naming) or ``<taxid>.fna``."""
+    return sorted(ref_dir.glob(f"{taxid}_*.fna")) + sorted(ref_dir.glob(f"{taxid}.fna"))
+
+
 def resolve_reference(
     taxid: int,
     manifest: dict[int, ManifestEntry] | None,
@@ -102,22 +107,26 @@ def resolve_reference(
 ) -> tuple[ManifestEntry | None, Path | None]:
     """Resolve a reference genome for a species taxid.
 
-    Order: manifest entry (its own ``file_path``, or ``{accession}*.fna``
-    inside ``ref_dir`` when given) → ``{taxid}*.fna`` glob in ``ref_dir``.
+    Order: manifest entry (``{accession}*.fna`` in ``ref_dir`` → its own
+    ``file_path`` → ``{taxid}_*.fna``/``{taxid}.fna`` in ``ref_dir``) →
+    taxid-named files in ``ref_dir`` alone.
     Returns ``(entry_or_None, fasta_path_or_None)``.
     """
     entry = (manifest or {}).get(taxid)
     if entry is not None:
         candidates: list[Path] = []
-        if ref_dir is not None and entry.accession:
-            candidates = sorted(Path(ref_dir).glob(f"{entry.accession}*.fna"))
+        if ref_dir is not None:
+            if entry.accession:
+                candidates = sorted(Path(ref_dir).glob(f"{entry.accession}*.fna"))
+            if not candidates:
+                candidates = _taxid_candidates(Path(ref_dir), taxid)
         if candidates:
             return entry, candidates[0]
         if entry.file_path.is_file():
             return entry, entry.file_path
         return entry, None
     if ref_dir is not None:
-        candidates = sorted(Path(ref_dir).glob(f"{taxid}*.fna"))
+        candidates = _taxid_candidates(Path(ref_dir), taxid)
         if candidates:
             return None, candidates[0]
     return None, None

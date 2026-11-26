@@ -44,9 +44,17 @@ re-run it after the manual step to finish verification.
 
 ### Coverage references in one step
 
-For 种基因组覆盖度 you need per-species reference FASTAs. Instead of
-fetching by hand, feed the missing list from `net build` back into
-`db fetch refs`:
+For 种基因组覆盖度 you need per-species reference FASTAs. The simplest path
+is `--auto-refs` on `net build` (missing references are downloaded via the
+NCBI Datasets CLI before coverage; existing files are reused):
+
+```bash
+gmeta net build kraken/*.report --reads-dir raw_reads --auto-refs \
+  -o 识别网上报.xlsx
+```
+
+Offline / scripted alternative — feed the missing list from `net build`
+back into `db fetch refs`:
 
 ```bash
 gmeta net build kraken/*.report --reads-dir raw_reads --ref-dir refs \

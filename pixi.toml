@@ -27,6 +27,7 @@ centrifuge = ">=1.0.4"
 kaiju = ">=1.10"
 metaphlan = ">=4.0"
 kmcp = ">=0.9"
+ncbi-datasets-cli = ">=16"
 pango = ">=1.50"
 
 [pypi-dependencies]

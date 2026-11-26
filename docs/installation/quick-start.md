@@ -73,19 +73,12 @@ gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
   -D "$GMETA_DB_DIR/kraken2" -O gmeta-out/1 -t 8
 # artifacts: gmeta-out/1/pipeline/kreport.txt / bracken.txt / fastp.json
 
-# 2) first workbook pass: report + missing-reference list
+# 2) one command: workbook + automatic reference download + coverage
 gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . --ref-dir "$GMETA_DB_DIR/refs" \
-  -o 1.xlsx --details coverage_details.tsv \
-  --missing-refs-out missing_refs.tsv -t 8
-
-# 3) if missing_refs.tsv has rows: fetch references, then re-run (skip if empty)
-gmeta db fetch refs --missing-refs missing_refs.tsv -O scripts/
-bash scripts/fetch-refs.sh
-gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . \
-  --ref-dir "$GMETA_DB_DIR/refs" --manifest "$GMETA_DB_DIR/refs/manifest.csv" \
+  --reads-dir . --auto-refs --ref-dir "$GMETA_DB_DIR/refs" \
   -o 1.xlsx --details coverage_details.tsv -t 8
+
+# offline fallback: export the missing list → gmeta db fetch refs --missing-refs … → re-run
 ```
 
 Rules that matter:

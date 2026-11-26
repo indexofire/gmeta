@@ -41,8 +41,16 @@ bash scripts/run_all.sh           # 或按顺序全部执行
 
 ### 一步补齐覆盖度参考基因组
 
-种基因组覆盖度需要各物种的参考基因组 FASTA。无需手工准备：把 `net build`
-输出的缺失清单喂回 `db fetch refs`：
+种基因组覆盖度需要各物种的参考基因组 FASTA。最简单的方式是 `net build`
+直接加 `--auto-refs`（缺失参考在计算覆盖度前通过 NCBI Datasets CLI 自动
+下载，已存在的直接复用）：
+
+```bash
+gmeta net build kraken/*.report --reads-dir raw_reads --auto-refs \
+  -o 识别网上报.xlsx
+```
+
+离线/脚本化备选——把 `net build` 的缺失清单喂回 `db fetch refs`：
 
 ```bash
 gmeta net build kraken/*.report --reads-dir raw_reads --ref-dir refs \

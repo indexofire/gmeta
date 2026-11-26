@@ -666,6 +666,15 @@ def net_group() -> None:
     help="minimap2 read preset.",
 )
 @click.option(
+    "--auto-refs",
+    is_flag=True,
+    default=False,
+    help=(
+        "Download missing reference genomes (NCBI Datasets CLI) before coverage — "
+        "one command instead of net build → fetch refs → net build."
+    ),
+)
+@click.option(
     "-J",
     "--jobs",
     type=click.IntRange(min=1),
@@ -688,6 +697,7 @@ def net_build(
     split_dir: str | None,
     details_tsv: str | None,
     missing_refs_out: str | None,
+    auto_refs: bool,
     per_species: bool,
     min_depths: str,
     preset: str,
@@ -724,6 +734,53 @@ def net_build(
     want_coverage = reads_dir is not None
     if sample_id_override and len(profiles) > 1:
         raise click.UsageError("--sample-id only applies to a single input file")
+    if auto_refs and not want_coverage:
+        raise click.UsageError("--auto-refs requires --reads-dir (it fetches coverage references)")
+
+    if auto_refs:
+        # pre-pass over every sample: fetch missing references once, before
+        # the (possibly parallel) coverage work — avoids download races.
+        import os
+
+        from gmeta.config import DB_DIR
+        from gmeta.refgenomes import ensure_references
+
+        missing_taxids: set[int] = set()
+        for path in profiles:
+            probe_id = sample_id_override or _sample_id_from_profile(path)
+            try:
+                probe_rows, _, _ = profile_to_network_rows(
+                    path,
+                    probe_id,
+                    top=top,
+                    manifest=manifest_table,
+                    ref_dir=ref_dir,
+                    profiler=profiler,
+                    kaiju_genus=kaiju_genus,
+                )
+            except ValueError as exc:
+                raise click.ClickException(str(exc)) from exc
+            missing_taxids.update(
+                row.taxid for row in probe_rows if row.reference is None and row.taxid
+            )
+        auto_dir = Path(ref_dir) if ref_dir else DB_DIR / "refs"
+        if missing_taxids:
+            _info(
+                f"auto-refs: {len(missing_taxids)} species missing references — "
+                f"fetching into {auto_dir}"
+            )
+            ready, errors = ensure_references(
+                missing_taxids,
+                auto_dir,
+                api_key=os.environ.get("NCBI_API_KEY") or None,
+                on_message=lambda msg: _info(f"[auto-refs] {msg}"),
+            )
+            _info(f"auto-refs: {len(ready)}/{len(missing_taxids)} reference(s) ready")
+            if len(errors) < len(missing_taxids):
+                # newly fetched files are <taxid>_<accession>.fna in auto_dir
+                ref_dir = str(auto_dir)
+        else:
+            _info("auto-refs: all references already present")
 
     def process_one(path: str) -> list[NetworkRow]:
         """Profile one input and fill its coverage columns (thread-safe)."""
@@ -832,6 +889,7 @@ def net_build(
         _info(
             f"missing references: {len(no_ref)} row(s) — supply --manifest/--ref-dir "
             "covering these species"
+            + ("" if auto_refs else " (or use --auto-refs to download them)")
             + (" (see --missing-refs-out for the list)" if missing_refs_out else "")
         )
 

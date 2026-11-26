@@ -32,26 +32,32 @@ gmeta net build kraken/*.report \
   -o 识别网上报.xlsx --split-dir result/ --details coverage_details.tsv
 ```
 
-### 从 `gmeta run` 到上报工作簿
+### 从 `gmeta run` 到上报工作簿——一条命令
 
 `gmeta run` 的分析产物保存在 `<outdir>/<sample>/pipeline/`（`kreport.txt`、
 `bracken.txt`、`fastp.json` 等）。`net build` 识别这个目录结构：样本号取自
 样本目录，run 的产物可直接生成工作簿，reads 也按样本号自动匹配。
+
+加上 `--auto-refs` 后，整个参考基因组准备流程合并进同一条命令：缺失的物种
+参考通过 NCBI Datasets CLI 在计算覆盖度前自动下载（已存在的直接复用）。
 
 ```bash
 # 1) 单样本分析（kraken2 + bracken）
 gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
   -D /data/db/kraken2 -O gmeta-out/1 -t 8
 
-# 2) 用 run 的 kreport 生成上报工作簿（样本号自动推导为 "1"）
+# 2) 一条命令出工作簿 + 覆盖度（缺参考自动下载）
 gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . \
-  --manifest ref_genome_manifest.csv --ref-dir ref_genomes \
-  -o 1.xlsx --details coverage_details.tsv --missing-refs-out missing_refs.tsv -t 8
+  --reads-dir . --auto-refs \
+  --ref-dir "$GMETA_DB_DIR/refs" \
+  -o 1.xlsx --details coverage_details.tsv -t 8
 ```
 
 注意：
 
+- `--auto-refs` 需要 NCBI Datasets CLI（`datasets`；gmeta 的 pixi 环境已含
+  `ncbi-datasets-cli`）。无网络时退回手动闭环：先跑一次
+  `--missing-refs-out`，再 `gmeta db fetch refs --missing-refs …` 后重跑。
 - 旧版本（不含 pipeline 目录推断）请先复制成样本名文件：
   `cp gmeta-out/1/pipeline/kreport.txt gmeta-out/1/1.kreport`，再传该路径。
 - `-D` 需要完整 kraken2 库：`hash.k2d/taxo.k2d/opts.k2d` **加**
@@ -111,6 +117,7 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 | `--kaiju-genus` | kaiju2table 属级表，提供真实属计数 |
 | `--top` | 每样本物种行数（默认 10） |
 | `--reads-dir` + `--reads-pattern` | 覆盖度用的原始 reads；pattern 未命中时自动按样本名前缀探测（`_R1/_R2`、`_1/_2`、`.1/.2` 配对，单端亦可） |
+| `--auto-refs` | 计算覆盖度前自动下载缺失参考（NCBI Datasets CLI；已存在的直接复用，一条命令完成） |
 | `--manifest` / `--ref-dir` | 参考基因组 |
 | `--missing-refs-out` | 输出缺参考物种清单 TSV（样本、taxid、拉丁名、读数） |
 | `--split-dir` | 每样本一个工作簿 |

@@ -8,6 +8,7 @@
 
 ### Added
 
+- `gmeta net build --auto-refs`：一条命令完成"判断缺参考 → 自动下载 → 计算覆盖度"。先统一扫描所有输入样本的缺失 taxid（多个样本只下载一次，避免并发竞态），用 NCBI Datasets CLI 下载到 refs 目录（`<taxid>_<accession>.fna` + `manifest.csv`，已存在的复用），然后照常并行计算覆盖度。无网络时可继续用手动闭环（`--missing-refs-out` → `db fetch refs`）。解析器支持 manifest 条目文件缺失时回退到 refs 目录的 `<taxid>_*.fna`。`ncbi-datasets-cli` 加入 pixi 依赖。
 - `gmeta net build -J/--jobs`：跨样本并行（线程池，重活在 minimap2/samtools 子进程里）；输出顺序保持输入顺序，单样本失败不中断整批。`-t/--threads` 仍是单个样本内工具线程数——建议 `-J × -t ≈ CPU 核数`。批量样本的覆盖度计算不再串行。
 - `gmeta net build --sample-id`：单输入时覆盖推导的样本号。用于产物路径里没有样本号的场景（如输出目录叫 `output2` 而 reads 是 `1_R1.fq.gz`），对齐后覆盖度即可正常计算。
 

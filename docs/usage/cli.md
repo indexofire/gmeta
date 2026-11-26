@@ -70,9 +70,10 @@ gmeta report -s SAMPLE-001 --metaphlan profile.txt -o SAMPLE-1.report.html
 
 Inputs can be any supported profiler file, including `gmeta run` artifacts
 under `<outdir>/<sample>/pipeline/kreport.txt` (the sample id comes from the
-directory). Coverage options: `--reads-dir`/`--reads-pattern`, `--manifest`,
-`--ref-dir`, `--missing-refs-out`; the 审核明细 sheet records a 覆盖度状态
-per row.
+directory). Coverage options: `--reads-dir`/`--reads-pattern`, `--ref-dir`,
+`--auto-refs` (download missing references via the NCBI Datasets CLI before
+coverage), `--missing-refs-out`; the 审核明细 sheet records a 覆盖度状态 per
+row. `-J/--jobs` runs samples concurrently.
 
 ## db
 

@@ -73,19 +73,12 @@ gmeta run 1_R1.fq.gz 1_R2.fq.gz -s 1 -m kraken2 \
   -D "$GMETA_DB_DIR/kraken2" -O gmeta-out/1 -t 8
 # 产物：gmeta-out/1/pipeline/kreport.txt / bracken.txt / fastp.json
 
-# 2) 首轮上报：生成工作簿 + 缺失参考清单
+# 2) 一条命令：生成工作簿 + 缺参考自动下载 + 覆盖度
 gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . --ref-dir "$GMETA_DB_DIR/refs" \
-  -o 1.xlsx --details coverage_details.tsv \
-  --missing-refs-out missing_refs.tsv -t 8
-
-# 3) 若 missing_refs.tsv 有内容：补下载参考后重跑（无缺失则跳过）
-gmeta db fetch refs --missing-refs missing_refs.tsv -O scripts/
-bash scripts/fetch-refs.sh
-gmeta net build gmeta-out/1/pipeline/kreport.txt \
-  --reads-dir . \
-  --ref-dir "$GMETA_DB_DIR/refs" --manifest "$GMETA_DB_DIR/refs/manifest.csv" \
+  --reads-dir . --auto-refs --ref-dir "$GMETA_DB_DIR/refs" \
   -o 1.xlsx --details coverage_details.tsv -t 8
+
+# 离线备选：先导出缺失清单 → gmeta db fetch refs --missing-refs … → 重跑
 ```
 
 关键规则：
