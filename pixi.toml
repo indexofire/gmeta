@@ -27,8 +27,8 @@ centrifuge = ">=1.0.4"
 kaiju = ">=1.10"
 metaphlan = ">=4.0"
 kmcp = ">=0.9"
-ncbi-datasets-cli = ">=16"
 pango = ">=1.50"
+ncbi-datasets-cli = ">=18.41.1,<19"
 
 [pypi-dependencies]
 gmeta = { path = ".", editable = true }

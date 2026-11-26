@@ -166,8 +166,9 @@ def ensure_references(
     datasets_bin = require_bin(
         "datasets",
         hint=(
-            "NCBI Datasets CLI not found — conda install -c conda-forge "
-            "ncbi-datasets-cli (the gmeta pixi env ships it)"
+            "NCBI Datasets CLI not found — install it and put it on PATH: "
+            "conda install -c conda-forge ncbi-datasets-cli, or grab the "
+            "standalone binary (see docs/installation/databases)"
         ),
         resolver=which,
     )

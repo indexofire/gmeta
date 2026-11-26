@@ -58,8 +58,10 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 
 Notes:
 
-- `--auto-refs` needs the NCBI Datasets CLI (`datasets`; the gmeta pixi env
-  ships `ncbi-datasets-cli`). Without network access, fall back to the manual
+- `--auto-refs` needs the NCBI Datasets CLI (`datasets`) on PATH — install
+  it with `conda install -c conda-forge ncbi-datasets-cli` or the standalone
+  binary (see [Databases](../installation/databases.md)). Without network
+  access, fall back to the manual
   loop: run once with `--missing-refs-out`, then
   `gmeta db fetch refs --missing-refs …` and re-run.
 - On releases without the pipeline-layout inference, copy the artifact to a

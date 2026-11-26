@@ -55,8 +55,9 @@ gmeta net build gmeta-out/1/pipeline/kreport.txt \
 
 注意：
 
-- `--auto-refs` 需要 NCBI Datasets CLI（`datasets`；gmeta 的 pixi 环境已含
-  `ncbi-datasets-cli`）。无网络时退回手动闭环：先跑一次
+- `--auto-refs` 需要 PATH 中有 NCBI Datasets CLI（`datasets`；安装：
+  `conda install -c conda-forge ncbi-datasets-cli` 或独立二进制，见
+  [数据库](../installation/databases.zh.md)）。无网络时退回手动闭环：先跑一次
   `--missing-refs-out`，再 `gmeta db fetch refs --missing-refs …` 后重跑。
 - 旧版本（不含 pipeline 目录推断）请先复制成样本名文件：
   `cp gmeta-out/1/pipeline/kreport.txt gmeta-out/1/1.kreport`，再传该路径。
