@@ -90,6 +90,7 @@ rows themselves are still emitted.
 | Flag | Meaning |
 | --- | --- |
 | `--profiler` | force the format (auto/kraken2/bracken/centrifuge/kaiju/metaphlan/kmcp/sylph) |
+| `--sample-id` | override the derived sample id (single input; fixes reads matching when the artifact path lacks the id) |
 | `--kaiju-genus` | kaiju2table genus table for real genus counts |
 | `--top` | species rows per sample (default 10) |
 | `--reads-dir` + `--reads-pattern` | raw reads for coverage; when the pattern misses, FASTQs starting with the sample id are auto-detected (mates paired by `_R1/_R2`, `_1/_2`, `.1/.2`, single-end ok) |

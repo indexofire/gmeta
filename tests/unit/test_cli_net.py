@@ -59,3 +59,35 @@ def test_net_build_bad_min_depths(kreport_file: Path, tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "min-depths" in result.output
+
+
+def test_net_build_sample_id_override(kreport_file: Path, tmp_path: Path) -> None:
+    """--sample-id fixes the reads matching when the artifact path lacks it."""
+    target = tmp_path / "上报.xlsx"
+    result = CliRunner().invoke(
+        main,
+        ["net", "build", str(kreport_file), "--sample-id", "1", "-o", str(target)],
+    )
+    assert result.exit_code == 0, result.output
+    ws = load_workbook(target)["混合样本"]
+    assert ws.cell(row=2, column=1).value == "1"
+
+
+def test_net_build_sample_id_rejected_for_batch(kreport_file: Path, tmp_path: Path) -> None:
+    other = tmp_path / "other.report"
+    other.write_text(kreport_file.read_text())
+    result = CliRunner().invoke(
+        main,
+        [
+            "net",
+            "build",
+            str(kreport_file),
+            str(other),
+            "--sample-id",
+            "1",
+            "-o",
+            str(tmp_path / "x.xlsx"),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "single input" in result.output

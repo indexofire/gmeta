@@ -571,6 +571,12 @@ def net_group() -> None:
 @net_group.command("build", context_settings=HELP_SETTINGS)
 @click.argument("profiles", nargs=-1, required=True, type=click.Path(exists=True))
 @click.option(
+    "--sample-id",
+    "sample_id_override",
+    default=None,
+    help="Override the derived sample id (single input only; fix reads matching).",
+)
+@click.option(
     "--profiler",
     type=click.Choice(
         ["auto", "kraken2", "bracken", "centrifuge", "kaiju", "metaphlan", "kmcp", "sylph"]
@@ -662,6 +668,7 @@ def net_group() -> None:
 @_threads_option("Threads for minimap2/samtools.")
 def net_build(
     profiles: tuple[str, ...],
+    sample_id_override: str | None,
     profiler: str,
     kaiju_genus: str | None,
     output: str,
@@ -706,10 +713,12 @@ def net_build(
 
     manifest_table = load_manifest(manifest) if manifest else None
     want_coverage = reads_dir is not None
+    if sample_id_override and len(profiles) > 1:
+        raise click.UsageError("--sample-id only applies to a single input file")
 
     all_rows: list[NetworkRow] = []
     for path in profiles:
-        sample_id = _sample_id_from_profile(path)
+        sample_id = sample_id_override or _sample_id_from_profile(path)
         try:
             rows, missing, detected = profile_to_network_rows(
                 path,
